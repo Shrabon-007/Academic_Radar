@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CT Marks Tracker | Academic Radar</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="student-dashboard.html" class="brand brand-title">
+        Academic Radar <br><span class="brand-subtitle">Student Portal</span>
+      </a>
+      <div class="user-info">
+        <div class="avatar avatar-sm">
+          u
+        </div>
+        <div class="user-info-text">
+          <span>Student Name <span class="role-badge badge-student">Student</span></span>
+        </div>
+        <a href="student-login.html" class="logout-link">
+          Log out
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <nav class="nav-links">
+    <a class="nav-link" href="student-dashboard.html">Dashboard</a>
+    <a class="nav-link" href="student-courses.html">Courses</a>
+    <a class="nav-link" href="student-attendance.html">Attendance</a>
+    <a class="nav-link" href="student-ct-marks.html">Marks</a>
+    <a class="nav-link" href="student-semester-cgpa.html">CGPA</a>
+    <a class="nav-link" href="student-message-advisor.html">Messages</a>
+  </nav>
+
+  <main class="page">
+    <h1 class="section-title">CT Marks & Performance</h1>
+    <p class="section-subtitle">Enter course test marks and monitor your class test progress.</p>
+
+    <section class="card">
+      <h3>CT Marks Input</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Course</th>
+              <th>CT-1</th>
+              <th>CT-2</th>
+              <th>CT-3</th>
+              <th>Total</th>
+              <th>Performance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>CSE-321</td>
+              <td><input type="number" value="17"></td>
+              <td><input type="number" value="18"></td>
+              <td><input type="number" value="16"></td>
+              <td>51</td>
+              <td><span class="badge badge-success">Strong</span></td>
+            </tr>
+            <tr>
+              <td>CSE-331</td>
+              <td><input type="number" value="14"></td>
+              <td><input type="number" value="13"></td>
+              <td><input type="number" value="15"></td>
+              <td>42</td>
+              <td><span class="badge badge-warning">Average</span></td>
+            </tr>
+            <tr>
+              <td>MAT-223</td>
+              <td><input type="number" value="10"></td>
+              <td><input type="number" value="9"></td>
+              <td><input type="number" value="11"></td>
+              <td>30</td>
+              <td><span class="badge badge-danger">Low</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <button class="btn btn-primary" class="mt-12" type="button">Save CT Marks</button>
+    </section>
+
+    <section class="grid grid-3" class="mt-18">
+      <article class="card">
+        <h3>CT Average</h3>
+        <div class="stats"><strong>41</strong><span class="muted">out of 60</span></div>
+      </article>
+      <article class="card">
+        <h3>Best Course</h3>
+        <div class="stats"><strong>CSE-321</strong><span class="badge badge-success">Top</span></div>
+      </article>
+      <article class="card">
+        <h3>Needs Focus</h3>
+        <div class="stats"><strong>MAT-223</strong><span class="badge badge-warning">Improve</span></div>
+      </article>
+    </section>
+  </main>
+
+  <script src='app.js'></script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | Academic Radar</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="auth-wrap">
+    <section class="auth-card">
+      <h1 class="auth-title">Academic Radar Login</h1>
+      <p class="auth-sub">Use any dummy email and password, choose your role, and continue to the matching dashboard.</p>
+
+      <form id="unified-login-form">
+        <div class="form-group">
+          <label for="login-role">Role</label>
+          <select id="login-role" required>
+            <option value="">Select role</option>
+            <option value="admin">Admin</option>
+            <option value="advisor">Advisor</option>
+            <option value="student">Student</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="login-email">Email</label>
+          <input id="login-email" type="email" placeholder="Enter any email" required>
+        </div>
+
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" placeholder="Enter any password" required>
+        </div>
+
+        <button class="btn btn-primary" type="submit">Login</button>
+      </form>
+
+      <p class="helper mt-12">No account yet?</p>
+      <button id="go-register" class="btn btn-outline" type="button">Go To Role Registration</button>
+      <p class="helper mt-12">You can also open registration directly: <a href="student-register.html" class="text-link">Student</a> / <a href="advisor-register.html" class="text-link">Advisor</a> / <a href="admin-register.html" class="text-link">Admin</a></p>
+    </section>
+  </main>
+
+  
+
+  <script src='auth.js'></script>
+  <script src='app.js'></script>
+</body>
+</html>

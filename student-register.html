@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Registration | Academic Radar</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="auth-wrap">
+    <section class="auth-card">
+      <h1 class="auth-title">Student Registration</h1>
+      <p class="auth-sub">Create your student account to start tracking academic progress.</p>
+
+      <form class="role-register-form" data-role="student">
+        <div class="form-group">
+          <label for="register-role-switch">Register As</label>
+          <select id="register-role-switch">
+            <option value="student" selected>Student</option>
+            <option value="advisor">Advisor</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <div class="form-group">
+            <label for="name">Full Name</label>
+            <input id="name" type="text" placeholder="Your full name" required>
+          </div>
+          <div class="form-group">
+            <label for="id">Student ID</label>
+            <input id="id" type="text" placeholder="e.g. 221-15-1234" required>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="form-group">
+            <label for="dept">Department</label>
+            <input id="dept" type="text" placeholder="CSE" required>
+          </div>
+          <div class="form-group">
+            <label for="batch">Batch</label>
+            <input id="batch" type="text" placeholder="61" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="email">University Email</label>
+          <input id="email" type="email" placeholder="yourid@student.edu" required>
+        </div>
+
+        <div class="row">
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input id="password" type="password" placeholder="Create password" required>
+          </div>
+          <div class="form-group">
+            <label for="confirm">Confirm Password</label>
+            <input id="confirm" type="password" placeholder="Confirm password" required>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" type="submit">Register</button>
+      </form>
+
+      <p class="helper">Already have an account? <a href="login.html?role=student" class="text-link">Login here</a></p>
+      <p class="footer-note">Academic Radar Student Portal</p>
+    </section>
+  </main>
+  
+
+  <script src='auth.js'></script>
+  <script src='app.js'></script>
+</body>
+</html>
+
+

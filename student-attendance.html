@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance Tracker | Academic Radar</title>
+  <link rel="stylesheet" href="styles.css">
+    <style>
+      .att-state {
+        width: auto;
+        padding: 4px;
+        min-width: 45px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        text-align: center;
+      }
+      .att-state option[value="P"] { color: #166534; font-weight: bold; }
+      .att-state option[value="A"] { color: #dc2626; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="student-dashboard.html" class="brand brand-title">
+        Academic Radar <br><span class="brand-subtitle">Student Portal</span>
+      </a>
+      <div class="user-info">
+        <div class="avatar avatar-sm">
+          u
+        </div>
+        <div class="user-info-text">
+          <span>Student Name <span class="role-badge badge-student">Student</span></span>
+        </div>
+        <a href="student-login.html" class="logout-link">
+          Log out
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <nav class="nav-links">
+    <a class="nav-link" href="student-dashboard.html">Dashboard</a>
+    <a class="nav-link" href="student-courses.html">Courses</a>
+    <a class="nav-link" href="student-attendance.html">Attendance</a>
+    <a class="nav-link" href="student-ct-marks.html">Marks</a>
+    <a class="nav-link" href="student-semester-cgpa.html">CGPA</a>
+    <a class="nav-link" href="student-message-advisor.html">Messages</a>
+  </nav>
+
+  <main class="page">
+    <h1 class="section-title">Attendance Tracker & Predicted Marks</h1>
+    <p class="section-subtitle">Update class attendance and monitor attendance-based marks.</p>
+
+    <section class="card">
+      <h3>Attendance Mark Rules (3-credit, 39 classes)</h3>
+      <ul>
+        <li>90% or above: 30 marks</li>
+        <li>85% to below 90%: 27 marks</li>
+        <li>80% to below 85%: 24 marks</li>
+        <li>Below 60%: 0 marks</li>
+      </ul>
+    </section>
+
+    <section class="card" class="mt-18">
+      <h3>Update Attendance</h3>
+      <p class="muted">Attended classes are now calculated automatically from the checklist below.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Course</th>
+              <th>Total Class</th>
+              <th>Attended (Auto)</th>
+              <th>Attendance %</th>
+              <th>Predicted Mark</th>
+              <th>Risk</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-summary-course="MAT-223">
+              <td>MAT-223</td>
+              <td>39</td>
+              <td class="attended-cell">0</td>
+              <td class="percent-cell">0%</td>
+              <td class="mark-cell">0</td>
+              <td><span class="badge risk-badge badge-danger">Critical</span></td>
+            </tr>
+            <tr data-summary-course="CSE-332">
+              <td>CSE-332</td>
+              <td>39</td>
+              <td class="attended-cell">0</td>
+              <td class="percent-cell">0%</td>
+              <td class="mark-cell">0</td>
+              <td><span class="badge risk-badge badge-danger">Critical</span></td>
+            </tr>
+            <tr data-summary-course="EEE-343">
+              <td>EEE-343</td>
+              <td>39</td>
+              <td class="attended-cell">0</td>
+              <td class="percent-cell">0%</td>
+              <td class="mark-cell">0</td>
+              <td><span class="badge risk-badge badge-danger">Critical</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <button class="btn btn-primary" class="mt-12" type="button">Save Attendance Summary</button>
+    </section>
+
+    <section class="card" class="mt-18">
+      <h3>Daily Class Attendance Checklist</h3>
+      <p class="muted">Mark the classes you attended today. Each course has 39 class slots for the semester.</p>
+      <div class="table-wrap">
+                            <table class="attendance-grid">
+            <thead>
+              <tr>
+                <th>Class Day</th>
+                <th>MAT-223</th>
+                <th>CSE-332</th>
+                <th>EEE-343</th>
+              </tr>
+            </thead>
+            <tbody>              <tr data-day='1'>
+                <td >Class 1</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='2'>
+                <td >Class 2</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='3'>
+                <td >Class 3</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='4'>
+                <td >Class 4</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='5'>
+                <td >Class 5</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='6'>
+                <td >Class 6</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='7'>
+                <td >Class 7</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='8'>
+                <td >Class 8</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='9'>
+                <td >Class 9</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='10'>
+                <td >Class 10</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='11'>
+                <td >Class 11</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='12'>
+                <td >Class 12</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='13'>
+                <td >Class 13</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='14'>
+                <td >Class 14</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='15'>
+                <td >Class 15</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='16'>
+                <td >Class 16</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='17'>
+                <td >Class 17</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='18'>
+                <td >Class 18</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='19'>
+                <td >Class 19</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='20'>
+                <td >Class 20</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='21'>
+                <td >Class 21</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='22'>
+                <td >Class 22</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='23'>
+                <td >Class 23</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='24'>
+                <td >Class 24</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='25'>
+                <td >Class 25</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='26'>
+                <td >Class 26</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='27'>
+                <td >Class 27</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='28'>
+                <td >Class 28</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='29'>
+                <td >Class 29</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='30'>
+                <td >Class 30</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='31'>
+                <td >Class 31</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='32'>
+                <td >Class 32</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='33'>
+                <td >Class 33</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='34'>
+                <td >Class 34</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='35'>
+                <td >Class 35</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='36'>
+                <td >Class 36</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='37'>
+                <td >Class 37</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='38'>
+                <td >Class 38</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+              <tr data-day='39'>
+                <td >Class 39</td>
+                <td><select class='att-state' data-course='MAT-223'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='CSE-332'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+                <td><select class='att-state' data-course='EEE-343'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select></td>
+              </tr>
+            </tbody>
+          </table>
+      </div>
+      <button class="btn btn-primary" class="mt-12" type="button">Save Daily Checklist</button>
+    </section>
+
+    <section class="grid grid-2" class="mt-18">
+      <article class="card">
+        <h3>Attendance Health</h3>
+        <p class="muted">Overall attendance status this semester.</p>
+        <div class="progress" class="mb-10"><span id="overallAttendanceBar" ></span></div>
+        <strong id="overallAttendanceText">0% Average Attendance</strong>
+      </article>
+
+      <article class="card">
+        <h3>Alert Summary</h3>
+        <div class="alert">MAT-223 is currently below the minimum threshold. If this continues, attendance mark remains 0.</div>
+      </article>
+    </section>
+  </main>
+
+  
+
+  <script src='app.js'></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+

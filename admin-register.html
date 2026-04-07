@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Registration | Academic Radar</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="auth-wrap">
+    <section class="auth-card">
+      <h1 class="auth-title">Admin Registration</h1>
+      <p class="auth-sub">Create an admin account for system management.</p>
+
+      <form class="role-register-form" data-role="admin">
+        <div class="form-group">
+          <label for="register-role-switch">Register As</label>
+          <select id="register-role-switch">
+            <option value="student">Student</option>
+            <option value="advisor">Advisor</option>
+            <option value="admin" selected>Admin</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <input id="name" type="text" placeholder="Admin name" required>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Official Email</label>
+          <input id="email" type="email" placeholder="admin@academicradar.edu" required>
+        </div>
+
+        <div class="row">
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input id="password" type="password" placeholder="Create password" required>
+          </div>
+          <div class="form-group">
+            <label for="confirm">Confirm Password</label>
+            <input id="confirm" type="password" placeholder="Confirm password" required>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" type="submit">Register</button>
+      </form>
+
+      <p class="helper">Already registered? <a href="login.html?role=admin" class="text-link">Admin login</a></p>
+      <p class="footer-note">Academic Radar Admin Portal</p>
+    </section>
+  </main>
+  
+
+  <script src='auth.js'></script>
+  <script src='app.js'></script>
+</body>
+</html>
+
+
+
+
