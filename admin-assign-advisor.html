@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher & Student Assignment | Academic Radar</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+          <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="admin-dashboard.html" class="brand brand-title">
+        Academic Radar <br><span class="brand-subtitle">Admin Portal</span>
+      </a>
+      <div class="user-info">
+        <div class="avatar avatar-sm">
+          u
+        </div>
+        <div class="user-info-text">
+          <span>Admin User <span class="role-badge">Admin</span></span>
+        </div>
+        <a href="admin-login.html" class="logout-link">
+          Log out
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <nav class="nav-links">
+    <a class="nav-link" href="admin-dashboard.html">Overview</a>
+    <a class="nav-link" href="admin-assign-advisor.html">Assign Advisors</a>
+    <a class="nav-link" href="admin-notices.html">Manage Notices</a>
+  </nav>
+
+  <main class="page">
+    <h1 class="section-title">Teacher List, Student List, and Advisor Assignment</h1>
+    <p class="section-subtitle">Assign teachers as advisors for student ID ranges by batch.</p>
+
+    <section class="card">
+      <h3>Assign Advisor by Student Range</h3>
+      <form>
+        <div class="row">
+          <div class="form-group">
+            <label for="batch">Batch</label>
+            <select id="batch">
+              <option>Batch 61</option>
+              <option>Batch 60</option>
+              <option>Batch 59</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="teacher">Teacher / Advisor</label>
+            <select id="teacher">
+              <option>Mr. Ibrahim</option>
+              <option>Dr. Rahman</option>
+              <option>Ms. Sultana</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="form-group">
+            <label for="startId">Student ID Start (Serial)</label>
+            <input id="startId" type="number" value="1" min="1">
+          </div>
+          <div class="form-group">
+            <label for="endId">Student ID End (Serial)</label>
+            <input id="endId" type="number" value="10" min="1">
+          </div>
+        </div>
+
+        <button class="btn btn-primary" type="submit">Assign Advisor</button>
+      </form>
+      <p class="helper">Example: Mr. Ibrahim assigned as advisor for student serial 1-10.</p>
+    </section>
+
+    <section class="grid grid-2" class="mt-18">
+      <article class="card">
+        <h3>Teacher List</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Teacher Name</th><th>Department</th><th>Current Advisees</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Mr. Ibrahim</td><td>CSE</td><td>10</td></tr>
+              <tr><td>Dr. Rahman</td><td>CSE</td><td>8</td></tr>
+              <tr><td>Ms. Sultana</td><td>EEE</td><td>9</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card">
+        <h3>Student List by Batch</h3>
+        <form class="mb-10">
+          <div class="form-group" >
+            <label for="batchFilter">Select Batch</label>
+            <select id="batchFilter">
+              <option>Batch 61</option>
+              <option>Batch 60</option>
+              <option>Batch 59</option>
+            </select>
+          </div>
+        </form>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Serial</th><th>Student ID</th><th>Name</th><th>Assigned Advisor</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td>221-15-1201</td><td>Farhan Islam</td><td>Mr. Ibrahim</td></tr>
+              <tr><td>2</td><td>221-15-1203</td><td>Nusrat Jahan</td><td>Mr. Ibrahim</td></tr>
+              <tr><td>10</td><td>221-15-1240</td><td>Mehedi Hasan</td><td>Mr. Ibrahim</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section class="card" class="mt-18">
+      <h3>Recent Assignment History</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Teacher</th><th>Batch</th><th>Student Range</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>31 Mar 2026</td><td>Mr. Ibrahim</td><td>61</td><td>1-10</td><td><span class="badge badge-success">Assigned</span></td></tr>
+            <tr><td>29 Mar 2026</td><td>Dr. Rahman</td><td>60</td><td>11-20</td><td><span class="badge badge-success">Assigned</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src='app.js'></script>
+</body>
+</html>
+
+
+
+
+
+

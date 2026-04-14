@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Danger Zone Students | Academic Radar</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="advisor-dashboard.html" class="brand brand-title">
+        Academic Radar <br><span class="brand-subtitle">Advisor Portal</span>
+      </a>
+      <div class="user-info">
+        <div class="avatar avatar-sm">
+          u
+        </div>
+        <div class="user-info-text">
+          <span>Dr. Rahman <span class="role-badge badge-advisor">Advisor</span></span>
+        </div>
+        <a href="advisor-login.html" class="logout-link">
+          Log out
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <nav class="nav-links">
+    <a class="nav-link" href="advisor-dashboard.html">Overview</a>
+    <a class="nav-link" href="advisor-student-ranking.html">Student Ranking</a>
+    <a class="nav-link" href="advisor-danger-zone.html">Danger Zone</a>
+    <a class="nav-link" href="advisor-messages.html">Messages</a>
+  </nav>
+
+  <main class="page">
+    <h1 class="section-title">Suggested Danger Zone Students</h1>
+    <p class="section-subtitle">Students identified by low attendance, weak CT marks, and CGPA decline.</p>
+
+    <section class="card">
+      <h3>Risk List and Meeting SMS</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Current CGPA</th>
+              <th>Attendance Risk</th>
+              <th>CT Risk</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Mehedi Hasan (221-15-1240)</td>
+              <td>2.41</td>
+              <td><span class="badge badge-danger">High</span></td>
+              <td><span class="badge badge-danger">High</span></td>
+              <td><button class="btn btn-primary" type="button">Send SMS for Meeting</button></td>
+            </tr>
+            <tr>
+              <td>Samia Akter (221-15-1242)</td>
+              <td>2.67</td>
+              <td><span class="badge badge-warning">Medium</span></td>
+              <td><span class="badge badge-warning">Medium</span></td>
+              <td><button class="btn btn-primary" type="button">Send SMS for Meeting</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" class="mt-18">
+      <h3>Custom SMS Template</h3>
+      <form>
+        <div class="form-group">
+          <label for="student">Select Student</label>
+          <select id="student">
+            <option>Mehedi Hasan (221-15-1240)</option>
+            <option>Samia Akter (221-15-1242)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="message">SMS Message</label>
+          <textarea id="message">Please meet me this week regarding your current semester performance and improvement plan.</textarea>
+        </div>
+        <button class="btn btn-primary" type="submit">Send SMS</button>
+      </form>
+    </section>
+  </main>
+
+  <script src='app.js'></script>
+</body>
+</html>
+
+
+

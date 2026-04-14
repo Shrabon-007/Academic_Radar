@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advisor Messages | Academic Radar</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="advisor-dashboard.html" class="brand brand-title">
+        Academic Radar <br><span class="brand-subtitle">Advisor Portal</span>
+      </a>
+      <div class="user-info">
+        <div class="avatar avatar-sm">
+          u
+        </div>
+        <div class="user-info-text">
+          <span>Dr. Rahman <span class="role-badge badge-advisor">Advisor</span></span>
+        </div>
+        <a href="advisor-login.html" class="logout-link">
+          Log out
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <nav class="nav-links">
+    <a class="nav-link" href="advisor-dashboard.html">Overview</a>
+    <a class="nav-link" href="advisor-student-ranking.html">Student Ranking</a>
+    <a class="nav-link" href="advisor-danger-zone.html">Danger Zone</a>
+    <a class="nav-link" href="advisor-messages.html">Messages</a>
+  </nav>
+
+  <main class="page">
+    <h1 class="section-title">Advisor SMS Inbox & Reply</h1>
+    <p class="section-subtitle">Receive student messages and send response for meeting schedule.</p>
+
+    <section class="grid grid-2">
+      <article class="card">
+        <h3>Received Student Messages</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Date</th><th>Student</th><th>Message</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>30 Mar 2026</td>
+                <td>Mehedi Hasan</td>
+                <td>Sir, I need help with attendance and CT preparation.</td>
+                <td><span class="badge badge-warning">New</span></td>
+              </tr>
+              <tr>
+                <td>29 Mar 2026</td>
+                <td>Nusrat Jahan</td>
+                <td>Can I meet you regarding course planning next semester?</td>
+                <td><span class="badge badge-success">Read</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card">
+        <h3>Reply / Send New SMS</h3>
+        <form>
+          <div class="form-group">
+            <label for="toStudent">To Student</label>
+            <select id="toStudent">
+              <option>Mehedi Hasan (221-15-1240)</option>
+              <option>Nusrat Jahan (221-15-1203)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="subject">Subject</label>
+            <input id="subject" type="text" value="Meeting Schedule">
+          </div>
+
+          <div class="form-group">
+            <label for="sms">Message</label>
+            <textarea id="sms">Please meet me on Tuesday at 2:00 PM in advisor room to discuss your performance.</textarea>
+          </div>
+
+          <button class="btn btn-primary" type="submit">Send SMS</button>
+        </form>
+      </article>
+    </section>
+  </main>
+
+  <script src='app.js'></script>
+</body>
+</html>
+
+
+

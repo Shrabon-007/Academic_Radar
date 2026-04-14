@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Message Advisor | Academic Radar</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="student-dashboard.html" class="brand brand-title">
+        Academic Radar <br><span class="brand-subtitle">Student Portal</span>
+      </a>
+      <div class="user-info">
+        <div class="avatar avatar-sm">
+          u
+        </div>
+        <div class="user-info-text">
+          <span>Student Name <span class="role-badge badge-student">Student</span></span>
+        </div>
+        <a href="student-login.html" class="logout-link">
+          Log out
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <nav class="nav-links">
+    <a class="nav-link" href="student-dashboard.html">Dashboard</a>
+    <a class="nav-link" href="student-courses.html">Courses</a>
+    <a class="nav-link" href="student-attendance.html">Attendance</a>
+    <a class="nav-link" href="student-ct-marks.html">Marks</a>
+    <a class="nav-link" href="student-semester-cgpa.html">CGPA</a>
+    <a class="nav-link" href="student-message-advisor.html">Messages</a>
+  </nav>
+
+  <main class="page">
+    <h1 class="section-title">Send Message to Advisor</h1>
+    <p class="section-subtitle">Request a meeting or ask for academic guidance.</p>
+
+    <section class="grid grid-2">
+      <article class="card">
+        <h3>New Message</h3>
+        <form>
+          <div class="form-group">
+            <label for="advisor">Advisor</label>
+            <select id="advisor">
+              <option>Dr. A. Karim (Primary Advisor)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="subject">Subject</label>
+            <input id="subject" type="text" placeholder="Meeting request regarding low attendance">
+          </div>
+
+          <div class="form-group">
+            <label for="message">Message</label>
+            <textarea id="message" placeholder="Dear Sir/Madam, I want to discuss my current academic performance and improvement plan."></textarea>
+          </div>
+
+          <button class="btn btn-primary" type="submit">Send Message</button>
+        </form>
+      </article>
+
+      <article class="card">
+        <h3>Meeting Availability</h3>
+        <p class="muted">Suggested available slots from advisor office:</p>
+        <ul>
+          <li>Sunday, 11:00 AM - 12:00 PM</li>
+          <li>Tuesday, 2:00 PM - 3:00 PM</li>
+          <li>Wednesday, 10:30 AM - 11:30 AM</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="card" class="mt-18">
+      <h3>Recent Messages</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Subject</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>26 Mar 2026</td>
+              <td>Request for attendance counseling</td>
+              <td><span class="badge badge-success">Replied</span></td>
+            </tr>
+            <tr>
+              <td>10 Mar 2026</td>
+              <td>Midterm performance discussion</td>
+              <td><span class="badge badge-warning">Pending</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src='app.js'></script>
+</body>
+</html>
+
+
+

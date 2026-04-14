@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advisor Student Ranking | Academic Radar</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="advisor-dashboard.html" class="brand brand-title">
+        Academic Radar <br><span class="brand-subtitle">Advisor Portal</span>
+      </a>
+      <div class="user-info">
+        <div class="avatar avatar-sm">
+          u
+        </div>
+        <div class="user-info-text">
+          <span>Dr. Rahman <span class="role-badge badge-advisor">Advisor</span></span>
+        </div>
+        <a href="advisor-login.html" class="logout-link">
+          Log out
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <nav class="nav-links">
+    <a class="nav-link" href="advisor-dashboard.html">Overview</a>
+    <a class="nav-link" href="advisor-student-ranking.html">Student Ranking</a>
+    <a class="nav-link" href="advisor-danger-zone.html">Danger Zone</a>
+    <a class="nav-link" href="advisor-messages.html">Messages</a>
+  </nav>
+
+  <main class="page">
+    <h1 class="section-title">Assigned Students by Batch and CGPA Ranking</h1>
+    <p class="section-subtitle">View your advised students and sort by semester/batch performance.</p>
+
+    <section class="card">
+      <form class="row">
+        <div class="form-group">
+          <label for="batch">Select Batch</label>
+          <select id="batch">
+            <option>Batch 61</option>
+            <option>Batch 60</option>
+            <option>Batch 59</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="semester">Current Semester</label>
+          <select id="semester">
+            <option>Spring 2026</option>
+            <option>Fall 2025</option>
+          </select>
+        </div>
+      </form>
+    </section>
+
+    <section class="card" class="mt-18">
+      <h3>Batch 61 Ranking (Top to Bottom)</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Student ID</th>
+              <th>Name</th>
+              <th>Current CGPA</th>
+              <th>Overall CGPA</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>221-15-1201</td>
+              <td>Farhan Islam</td>
+              <td>3.88</td>
+              <td>3.79</td>
+              <td><a class="btn btn-outline" href="advisor-student-profile.html">View Report</a></td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>221-15-1203</td>
+              <td>Nusrat Jahan</td>
+              <td>3.76</td>
+              <td>3.68</td>
+              <td><a class="btn btn-outline" href="advisor-student-profile.html">View Report</a></td>
+            </tr>
+            <tr>
+              <td>10</td>
+              <td>221-15-1240</td>
+              <td>Mehedi Hasan</td>
+              <td>2.41</td>
+              <td>2.58</td>
+              <td><a class="btn btn-outline" href="advisor-student-profile.html">View Report</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src='app.js'></script>
+</body>
+</html>
+
+
+

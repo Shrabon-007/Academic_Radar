@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Academic Report | Academic Radar</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="advisor-dashboard.html" class="brand brand-title">
+        Academic Radar <br><span class="brand-subtitle">Advisor Portal</span>
+      </a>
+      <div class="user-info">
+        <div class="avatar avatar-sm">
+          u
+        </div>
+        <div class="user-info-text">
+          <span>Dr. Rahman <span class="role-badge badge-advisor">Advisor</span></span>
+        </div>
+        <a href="advisor-login.html" class="logout-link">
+          Log out
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <nav class="nav-links">
+    <a class="nav-link" href="advisor-dashboard.html">Overview</a>
+    <a class="nav-link" href="advisor-student-ranking.html">Student Ranking</a>
+    <a class="nav-link" href="advisor-danger-zone.html">Danger Zone</a>
+    <a class="nav-link" href="advisor-messages.html">Messages</a>
+  </nav>
+
+  <main class="page">
+    <h1 class="section-title">Student Full Academic Report</h1>
+    <p class="section-subtitle">Student: Mehedi Hasan | ID: 221-15-1240 | Batch 61</p>
+
+    <section class="grid grid-3">
+      <article class="card">
+        <h3>Overall CGPA</h3>
+        <div class="stats"><strong>2.58</strong><span class="badge badge-warning">At Risk</span></div>
+      </article>
+      <article class="card">
+        <h3>Class Ranking</h3>
+        <div class="stats"><strong>#10</strong><span class="muted">out of 10</span></div>
+      </article>
+      <article class="card">
+        <h3>Current Semester CGPA</h3>
+        <div class="stats"><strong>2.41</strong><span class="badge badge-danger">Low</span></div>
+      </article>
+    </section>
+
+    <section class="grid grid-2" class="mt-18">
+      <article class="card">
+        <h3>Current Semester Attendance</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Course</th><th>Attendance %</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>MAT-223</td><td>56%</td><td><span class="badge badge-danger">Critical</span></td></tr>
+              <tr><td>CSE-332</td><td>74%</td><td><span class="badge badge-warning">Watch</span></td></tr>
+              <tr><td>EEE-343</td><td>82%</td><td><span class="badge badge-warning">Watch</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card">
+        <h3>Previous Semester Attendance Report</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Semester</th><th>Average Attendance</th><th>Remarks</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Fall 2025</td><td>71%</td><td>Needs improvement</td></tr>
+              <tr><td>Spring 2025</td><td>79%</td><td>Moderate</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid grid-2" class="mt-18">
+      <article class="card">
+        <h3>Current Semester CT Marks</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Course</th><th>Total CT</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>MAT-223</td><td>30</td><td><span class="badge badge-danger">Low</span></td></tr>
+              <tr><td>CSE-332</td><td>42</td><td><span class="badge badge-warning">Average</span></td></tr>
+              <tr><td>EEE-343</td><td>45</td><td><span class="badge badge-warning">Average</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card">
+        <h3>Previous Semester CT Report</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Semester</th><th>Average CT</th><th>Remarks</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Fall 2025</td><td>38</td><td>Weak</td></tr>
+              <tr><td>Spring 2025</td><td>43</td><td>Moderate</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section class="card" class="mt-18">
+      <h3>Semester-wise CGPA History</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Semester</th><th>CGPA</th><th>Trend</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Spring 2026</td><td>2.41</td><td><span class="badge badge-danger">Down</span></td></tr>
+            <tr><td>Fall 2025</td><td>2.62</td><td><span class="badge badge-warning">Stable</span></td></tr>
+            <tr><td>Spring 2025</td><td>2.71</td><td><span class="badge badge-warning">Stable</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src='app.js'></script>
+</body>
+</html>
+
+
+
