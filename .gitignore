@@ -10,5 +10,10 @@
 *.log.*
 *.sig
 
+# Backend local artifacts
+backend/node_modules/
+backend/.env
+backend/*.log
+
 pkg/
 src/
