@@ -43,9 +43,12 @@
           <div class="form-group">
             <label for="batch">Batch</label>
             <select id="batch">
-              <option>Batch 61</option>
-              <option>Batch 60</option>
-              <option>Batch 59</option>
+              <option value="20">Batch 20</option>
+              <option value="21">Batch 21</option>
+              <option value="22" selected>Batch 22</option>
+              <option value="23">Batch 23</option>
+              <option value="24">Batch 24</option>
+              <option value="25">Batch 25</option>
             </select>
           </div>
           <div class="form-group">
@@ -60,18 +63,18 @@
 
         <div class="row">
           <div class="form-group">
-            <label for="startId">Student ID Start (Serial)</label>
-            <input id="startId" type="number" value="1" min="1">
+            <label for="startId">Student ID Start</label>
+            <input id="startId" type="number" value="2204001" min="1">
           </div>
           <div class="form-group">
-            <label for="endId">Student ID End (Serial)</label>
-            <input id="endId" type="number" value="10" min="1">
+            <label for="endId">Student ID End</label>
+            <input id="endId" type="number" value="2204010" min="1">
           </div>
         </div>
 
         <button class="btn btn-primary" type="submit">Assign Advisor</button>
       </form>
-      <p class="helper">Example: Mr. Ibrahim assigned as advisor for student serial 1-10.</p>
+      <p class="helper">Example: Mr. Ibrahim assigned as advisor for student ID 2204001-2204010 (exactly 10 students) in Batch 22.</p>
     </section>
 
     <section class="grid grid-2" class="mt-18">
@@ -82,7 +85,7 @@
             <thead>
               <tr><th>Teacher Name</th><th>Department</th><th>Current Advisees</th></tr>
             </thead>
-            <tbody>
+            <tbody id="advisorListTableBody">
               <tr><td>Mr. Ibrahim</td><td>CSE</td><td>10</td></tr>
               <tr><td>Dr. Rahman</td><td>CSE</td><td>8</td></tr>
               <tr><td>Ms. Sultana</td><td>EEE</td><td>9</td></tr>
@@ -97,9 +100,12 @@
           <div class="form-group" >
             <label for="batchFilter">Select Batch</label>
             <select id="batchFilter">
-              <option>Batch 61</option>
-              <option>Batch 60</option>
-              <option>Batch 59</option>
+              <option value="20">Batch 20</option>
+              <option value="21">Batch 21</option>
+              <option value="22" selected>Batch 22</option>
+              <option value="23">Batch 23</option>
+              <option value="24">Batch 24</option>
+              <option value="25">Batch 25</option>
             </select>
           </div>
         </form>
@@ -108,7 +114,7 @@
             <thead>
               <tr><th>Serial</th><th>Student ID</th><th>Name</th><th>Assigned Advisor</th></tr>
             </thead>
-            <tbody>
+            <tbody id="studentBatchTableBody">
               <tr><td>1</td><td>221-15-1201</td><td>Farhan Islam</td><td>Mr. Ibrahim</td></tr>
               <tr><td>2</td><td>221-15-1203</td><td>Nusrat Jahan</td><td>Mr. Ibrahim</td></tr>
               <tr><td>10</td><td>221-15-1240</td><td>Mehedi Hasan</td><td>Mr. Ibrahim</td></tr>
@@ -125,7 +131,7 @@
           <thead>
             <tr><th>Date</th><th>Teacher</th><th>Batch</th><th>Student Range</th><th>Status</th></tr>
           </thead>
-          <tbody>
+          <tbody id="assignmentHistoryBody">
             <tr><td>31 Mar 2026</td><td>Mr. Ibrahim</td><td>61</td><td>1-10</td><td><span class="badge badge-success">Assigned</span></td></tr>
             <tr><td>29 Mar 2026</td><td>Dr. Rahman</td><td>60</td><td>11-20</td><td><span class="badge badge-success">Assigned</span></td></tr>
           </tbody>

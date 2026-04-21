@@ -29,7 +29,7 @@
   <nav class="nav-links">
     <a class="nav-link" href="advisor-dashboard.html">Overview</a>
     <a class="nav-link" href="advisor-student-ranking.html">Student Ranking</a>
-    <a class="nav-link" href="advisor-danger-zone.html">Danger Zone</a>
+    <a class="nav-link" href="advisor-danger-zone.html">Performance Watchlist</a>
     <a class="nav-link" href="advisor-messages.html">Messages</a>
   </nav>
 
@@ -42,23 +42,32 @@
         <div class="form-group">
           <label for="batch">Select Batch</label>
           <select id="batch">
-            <option>Batch 61</option>
-            <option>Batch 60</option>
-            <option>Batch 59</option>
+            <option value="20">Batch 20</option>
+            <option value="21">Batch 21</option>
+            <option value="22" selected>Batch 22</option>
+            <option value="23">Batch 23</option>
+            <option value="24">Batch 24</option>
+            <option value="25">Batch 25</option>
           </select>
         </div>
         <div class="form-group">
           <label for="semester">Current Semester</label>
           <select id="semester">
-            <option>Spring 2026</option>
-            <option>Fall 2025</option>
+            <option>Level-1 Term-1</option>
+            <option>Level-1 Term-2</option>
+            <option>Level-2 Term-1</option>
+            <option>Level-2 Term-2</option>
+            <option>Level-3 Term-1</option>
+            <option>Level-3 Term-2</option>
+            <option>Level-4 Term-1</option>
+            <option>Level-4 Term-2</option>
           </select>
         </div>
       </form>
     </section>
 
     <section class="card" class="mt-18">
-      <h3>Batch 61 Ranking (Top to Bottom)</h3>
+      <h3 id="advisorRankingHeading">Batch Ranking (Top to Bottom)</h3>
       <div class="table-wrap">
         <table>
           <thead>
@@ -71,7 +80,7 @@
               <th>Action</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="advisorRankingTableBody">
             <tr>
               <td>1</td>
               <td>221-15-1201</td>

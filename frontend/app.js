@@ -22,6 +22,7 @@
     "advisor-student-profile.html": "advisor",
     "advisor-danger-zone.html": "advisor",
     "advisor-messages.html": "advisor",
+    "advisor-notices.html": "advisor",
     "student-dashboard.html": "student",
     "student-courses.html": "student",
     "student-attendance.html": "student",
@@ -29,6 +30,7 @@
     "student-semester-cgpa.html": "student",
     "student-running-semester-cgpa.html": "student",
     "student-cumulative-cgpa.html": "student",
+    "student-notices.html": "student",
     "student-message-advisor.html": "student"
   };
 
@@ -1463,9 +1465,61 @@
     if (!forms.length) return;
 
     var assignmentForm = forms[0];
-    var historyTable = document.querySelectorAll("table tbody");
-    var historyBody = historyTable[historyTable.length - 1];
+    var teacherSelect = document.getElementById("teacher");
+    var advisorListTableBody = document.getElementById("advisorListTableBody");
+    var historyBody = document.getElementById("assignmentHistoryBody");
+    var studentTableBody = document.getElementById("studentBatchTableBody");
+    var batchFilter = document.getElementById("batchFilter");
     var helper = document.querySelector(".helper");
+
+    function renderAdvisors(items) {
+      var advisors = Array.isArray(items) ? items : [];
+
+      if (teacherSelect) {
+        teacherSelect.innerHTML = "";
+        if (!advisors.length) {
+          var emptyOption = document.createElement("option");
+          emptyOption.value = "";
+          emptyOption.textContent = "No advisor account found";
+          teacherSelect.appendChild(emptyOption);
+        } else {
+          advisors.forEach(function (advisor) {
+            var option = document.createElement("option");
+            option.value = advisor.name || "Advisor";
+            option.textContent = advisor.name || "Advisor";
+            teacherSelect.appendChild(option);
+          });
+        }
+      }
+
+      if (advisorListTableBody) {
+        advisorListTableBody.innerHTML = "";
+        if (!advisors.length) {
+          var emptyRow = document.createElement("tr");
+          emptyRow.innerHTML = "<td colspan='3' class='muted'>No advisor account found.</td>";
+          advisorListTableBody.appendChild(emptyRow);
+          return;
+        }
+
+        advisors.forEach(function (advisor) {
+          var row = document.createElement("tr");
+          row.innerHTML =
+            "<td>" + (advisor.name || "Advisor") + "</td>" +
+            "<td>" + (advisor.department || "-") + "</td>" +
+            "<td>" + Number(advisor.adviseeCount || 0) + "</td>";
+          advisorListTableBody.appendChild(row);
+        });
+      }
+    }
+
+    function loadAdvisors() {
+      apiRequest("/portal/admin/advisors", { method: "GET" }).then(function (payload) {
+        var items = (((payload || {}).data || {}).items) || [];
+        renderAdvisors(items);
+      }).catch(function () {
+        // Keep static fallback from HTML if API fails.
+      });
+    }
 
     function renderAssignments(items) {
       if (!historyBody) return;
@@ -1487,15 +1541,55 @@
       });
     }
 
+    function renderStudents(items) {
+      if (!studentTableBody) return;
+      studentTableBody.innerHTML = "";
+
+      if (!items.length) {
+        var emptyRow = document.createElement("tr");
+        emptyRow.innerHTML = "<td colspan='4' class='muted'>No registered students found for this batch.</td>";
+        studentTableBody.appendChild(emptyRow);
+        return;
+      }
+
+      items.forEach(function (item) {
+        var row = document.createElement("tr");
+        row.innerHTML =
+          "<td>" + (item.serial || 0) + "</td>" +
+          "<td>" + (item.studentId || "") + "</td>" +
+          "<td>" + (item.name || "Student") + "</td>" +
+          "<td>" + (item.assignedAdvisor || "Not Assigned") + "</td>";
+        studentTableBody.appendChild(row);
+      });
+    }
+
+    function loadStudentsByBatch(batchValue) {
+      if (!studentTableBody || !batchValue) return;
+
+      apiRequest("/portal/admin/students?batch=" + encodeURIComponent(batchValue), { method: "GET" }).then(function (payload) {
+        var items = (((payload || {}).data || {}).items) || [];
+        renderStudents(items);
+      }).catch(function (error) {
+        renderStudents([]);
+        showToast(error.message || "Could not load students for selected batch.");
+      });
+    }
+
     assignmentForm.addEventListener("submit", function (event) {
       event.preventDefault();
-      var batch = (document.getElementById("batch") || {}).value || "Batch 61";
+      var batch = (document.getElementById("batch") || {}).value || "22";
       var teacher = (document.getElementById("teacher") || {}).value || "Teacher";
       var startId = Number((document.getElementById("startId") || {}).value || 0);
       var endId = Number((document.getElementById("endId") || {}).value || 0);
+      var studentCount = endId - startId + 1;
 
       if (!startId || !endId || endId < startId) {
         showToast("Invalid student serial range.");
+        return;
+      }
+
+      if (studentCount !== 10) {
+        showToast("Advisor assignment must cover exactly 10 students.");
         return;
       }
 
@@ -1509,20 +1603,31 @@
         }
       }).then(function () {
         if (helper) {
-          helper.textContent = teacher + " assigned as advisor for student serial " + startId + "-" + endId + ".";
+          helper.textContent = teacher + " assigned as advisor for student ID " + startId + "-" + endId + " in " + batch + " (10 students).";
         }
 
         var assignments = safeRead(STORAGE_KEYS.assignments, []);
         assignments.unshift({ date: new Date().toISOString(), batch: batch, teacher: teacher, startId: startId, endId: endId });
         safeWrite(STORAGE_KEYS.assignments, assignments);
         loadAssignments();
+        if (batchFilter) {
+          loadStudentsByBatch(batchFilter.value || batch);
+        }
         showToast("Advisor assignment saved to database.");
       }).catch(function (error) {
         showToast(error.message || "Failed to save assignment.");
       });
     });
 
+    if (batchFilter) {
+      batchFilter.addEventListener("change", function () {
+        loadStudentsByBatch(batchFilter.value || "22");
+      });
+    }
+
     loadAssignments();
+    loadAdvisors();
+    loadStudentsByBatch((batchFilter && batchFilter.value) || "22");
   }
 
   function initAdvisorRanking() {
@@ -1532,37 +1637,304 @@
 
     var batchSelect = document.getElementById("batch");
     var semesterSelect = document.getElementById("semester");
-    var tableBody = document.querySelector("table tbody");
-    var heading = document.querySelector("section.card h3");
+    var tableBody = document.getElementById("advisorRankingTableBody") || document.querySelector("table tbody");
+    var heading = document.getElementById("advisorRankingHeading") || document.querySelector("section.card h3");
     if (!tableBody) return;
 
-    function sortByCurrentCgpa() {
-      var rows = Array.from(tableBody.querySelectorAll("tr"));
-      rows.sort(function (a, b) {
-        var cgpaA = Number(a.children[3].textContent) || 0;
-        var cgpaB = Number(b.children[3].textContent) || 0;
-        return cgpaB - cgpaA;
-      });
+    function normalizeBatchLabel(value) {
+      var raw = String(value || "").trim();
+      return /^batch\s+/i.test(raw) ? raw : ("Batch " + raw);
+    }
 
-      rows.forEach(function (row, idx) {
-        row.children[0].textContent = String(idx + 1);
+    function renderAdvisorStudents(items, activeBatch) {
+      tableBody.innerHTML = "";
+      if (!items.length) {
+        var emptyRow = document.createElement("tr");
+        emptyRow.innerHTML = "<td colspan='6' class='muted'>No assigned students found for this batch.</td>";
+        tableBody.appendChild(emptyRow);
+        if (heading) heading.textContent = normalizeBatchLabel(activeBatch) + " Ranking (Top to Bottom)";
+        return;
+      }
+
+      items.forEach(function (item, idx) {
+        var profileHref = "advisor-student-profile.html?studentUserId=" + encodeURIComponent(item.userId || "") +
+          "&studentId=" + encodeURIComponent(item.studentId || "") +
+          "&batch=" + encodeURIComponent(item.batch || "") +
+          "&name=" + encodeURIComponent(item.name || "Student");
+        var row = document.createElement("tr");
+        row.innerHTML =
+          "<td>" + (idx + 1) + "</td>" +
+          "<td>" + (item.studentId || "") + "</td>" +
+          "<td>" + (item.name || "Student") + "</td>" +
+          "<td>" + Number(item.currentCgpa || 0).toFixed(2) + "</td>" +
+          "<td>" + Number(item.overallCgpa || 0).toFixed(2) + "</td>" +
+          "<td><a class='btn btn-outline' href='" + profileHref + "'>View Report</a></td>";
         tableBody.appendChild(row);
       });
 
-      if (heading && batchSelect) {
-        heading.textContent = batchSelect.value + " Ranking (Top to Bottom)";
+      if (heading) heading.textContent = normalizeBatchLabel(activeBatch) + " Ranking (Top to Bottom)";
+    }
+
+    function ensureBatchOptions(batches) {
+      if (!batchSelect || !Array.isArray(batches) || !batches.length) return;
+      var current = String(batchSelect.value || "").replace(/^Batch\s*/i, "").trim();
+      batchSelect.innerHTML = "";
+      batches.forEach(function (batch) {
+        var b = String(batch || "").trim();
+        if (!b) return;
+        var opt = document.createElement("option");
+        opt.value = b;
+        opt.textContent = normalizeBatchLabel(b);
+        batchSelect.appendChild(opt);
+      });
+      if (current) {
+        var found = Array.from(batchSelect.options).some(function (opt) { return opt.value === current; });
+        if (found) batchSelect.value = current;
       }
     }
 
-    if (batchSelect) batchSelect.addEventListener("change", sortByCurrentCgpa);
-    if (semesterSelect) {
-      semesterSelect.addEventListener("change", function () {
-        showToast("Showing ranking for " + semesterSelect.value + ".");
-        sortByCurrentCgpa();
+    function loadAdvisorStudents() {
+      var selectedBatch = batchSelect ? String(batchSelect.value || "").replace(/^Batch\s*/i, "").trim() : "";
+      var url = "/portal/advisor/students" + (selectedBatch ? ("?batch=" + encodeURIComponent(selectedBatch)) : "");
+      apiRequest(url, { method: "GET" }).then(function (payload) {
+        var data = (payload || {}).data || {};
+        var batches = Array.isArray(data.batches) ? data.batches : [];
+        ensureBatchOptions(batches);
+
+        var activeBatch = batchSelect ? String(batchSelect.value || selectedBatch || "") : selectedBatch;
+        var items = Array.isArray(data.items) ? data.items : [];
+        var filtered = items.filter(function (item) {
+          return !activeBatch || String(item.batch || "") === String(activeBatch).replace(/^Batch\s*/i, "").trim();
+        });
+        renderAdvisorStudents(filtered, activeBatch || (batches[0] || "Batch"));
+      }).catch(function (error) {
+        tableBody.innerHTML = "";
+        var errRow = document.createElement("tr");
+        errRow.innerHTML = "<td colspan='6' class='muted'>Could not load assigned students.</td>";
+        tableBody.appendChild(errRow);
+        showToast(error.message || "Could not load assigned students.");
       });
     }
 
-    sortByCurrentCgpa();
+    if (batchSelect) batchSelect.addEventListener("change", loadAdvisorStudents);
+    if (semesterSelect) {
+      semesterSelect.addEventListener("change", function () {
+        showToast("Showing ranking for " + semesterSelect.value + ".");
+        loadAdvisorStudents();
+      });
+    }
+
+    loadAdvisorStudents();
+  }
+
+  function initAdvisorStudentProfile() {
+    if (!/advisor-student-profile\.html$/i.test(window.location.pathname)) {
+      return;
+    }
+
+    var params = new URLSearchParams(window.location.search || "");
+    var studentUserId = params.get("studentUserId") || "";
+    var studentId = params.get("studentId") || "";
+
+    var subtitleEl = document.getElementById("advisorStudentReportSubtitle");
+    var overallCgpaEl = document.getElementById("advisorStudentOverallCgpa");
+    var standingEl = document.getElementById("advisorStudentStandingBadge");
+    var rankEl = document.getElementById("advisorStudentRank");
+    var rankMetaEl = document.getElementById("advisorStudentRankMeta");
+    var currentCgpaEl = document.getElementById("advisorStudentCurrentCgpa");
+    var currentLabelEl = document.getElementById("advisorStudentCurrentSemesterLabel");
+    var attendanceBody = document.getElementById("advisorStudentAttendanceBody");
+    var ctBody = document.getElementById("advisorStudentCtBody");
+    var semesterCgpaBody = document.getElementById("advisorStudentSemesterCgpaBody");
+    var summaryStandingEl = document.getElementById("advisorPerformanceStanding");
+    var summaryOverallEl = document.getElementById("advisorPerformanceOverallCgpa");
+    var summaryCurrentEl = document.getElementById("advisorPerformanceCurrentCgpa");
+    var summaryAttendanceEl = document.getElementById("advisorPerformanceAttendance");
+    var summaryCtEl = document.getElementById("advisorPerformanceCt");
+    var summarySuggestionEl = document.getElementById("advisorPerformanceSuggestion");
+
+    function badgeClassByStanding(standing) {
+      var s = String(standing || "").toLowerCase();
+      if (s === "good") return "badge-success";
+      if (s === "moderate") return "badge-warning";
+      return "badge-danger";
+    }
+
+    function badgeClassByRisk(risk) {
+      var r = String(risk || "").toLowerCase();
+      if (r === "good") return "badge-success";
+      if (r === "watch") return "badge-warning";
+      return "badge-danger";
+    }
+
+    function badgeClassByCt(performance) {
+      var p = String(performance || "").toLowerCase();
+      if (p === "strong") return "badge-success";
+      if (p === "average") return "badge-warning";
+      return "badge-danger";
+    }
+
+    function badgeClassByTrend(trend) {
+      var t = String(trend || "").toLowerCase();
+      if (t === "up") return "badge-success";
+      if (t === "down") return "badge-danger";
+      return "badge-warning";
+    }
+
+    if (!studentUserId && !studentId) {
+      showToast("Student not selected. Open report from advisor ranking page.");
+      return;
+    }
+
+    var query = [];
+    if (studentUserId) query.push("studentUserId=" + encodeURIComponent(studentUserId));
+    if (studentId) query.push("studentId=" + encodeURIComponent(studentId));
+
+    apiRequest("/portal/advisor/student-report?" + query.join("&"), { method: "GET" }).then(function (payload) {
+      var data = (payload || {}).data || {};
+      var student = data.student || {};
+      var ranking = data.ranking || {};
+      var summary = data.performanceSummary || {};
+      var attendanceItems = Array.isArray(data.currentSemesterAttendance) ? data.currentSemesterAttendance : [];
+      var ctItems = Array.isArray(data.currentSemesterCtMarks) ? data.currentSemesterCtMarks : [];
+      var semesterItems = Array.isArray(data.semesterCgpa) ? data.semesterCgpa : [];
+
+      if (subtitleEl) {
+        subtitleEl.textContent = "Student: " + (student.name || "Student") + " | ID: " + (student.studentId || "-") + " | Batch " + (student.batch || "-");
+      }
+
+      if (overallCgpaEl) overallCgpaEl.textContent = Number(data.overallCgpa || 0).toFixed(2);
+      if (standingEl) {
+        var standingText = summary.standing || "At Risk";
+        standingEl.className = "badge " + badgeClassByStanding(standingText);
+        standingEl.textContent = standingText;
+      }
+
+      if (rankEl) rankEl.textContent = ranking.rank ? ("#" + ranking.rank) : "-";
+      if (rankMetaEl) rankMetaEl.textContent = "out of " + Number(ranking.classSize || 0);
+
+      if (currentCgpaEl) currentCgpaEl.textContent = Number(data.currentSemesterCgpa || 0).toFixed(2);
+      if (currentLabelEl) currentLabelEl.textContent = data.latestSemesterLabel || "No semester data";
+
+      if (attendanceBody) {
+        attendanceBody.innerHTML = "";
+        if (!attendanceItems.length) {
+          var emptyAttendance = document.createElement("tr");
+          emptyAttendance.innerHTML = "<td colspan='4' class='muted'>No attendance data found for current semester.</td>";
+          attendanceBody.appendChild(emptyAttendance);
+        } else {
+          attendanceItems.forEach(function (item) {
+            var row = document.createElement("tr");
+            row.innerHTML =
+              "<td>" + (item.courseCode || "") + "</td>" +
+              "<td>" + Number(item.percentage || 0).toFixed(0) + "%</td>" +
+              "<td>" + Number(item.predictedMark || 0).toFixed(0) + "</td>" +
+              "<td><span class='badge " + badgeClassByRisk(item.risk) + "'>" + String(item.risk || "watch").toUpperCase() + "</span></td>";
+            attendanceBody.appendChild(row);
+          });
+        }
+      }
+
+      if (ctBody) {
+        ctBody.innerHTML = "";
+        if (!ctItems.length) {
+          var emptyCt = document.createElement("tr");
+          emptyCt.innerHTML = "<td colspan='4' class='muted'>No CT data found for current semester.</td>";
+          ctBody.appendChild(emptyCt);
+        } else {
+          ctItems.forEach(function (item) {
+            var row = document.createElement("tr");
+            row.innerHTML =
+              "<td>" + (item.courseCode || "") + "</td>" +
+              "<td>" + Number(item.total || 0).toFixed(0) + " / " + Number(item.maxMarks || 0).toFixed(0) + "</td>" +
+              "<td>" + (item.maxMarks ? Number((Number(item.total || 0) / Number(item.maxMarks || 1) * 100)).toFixed(0) : "0") + "%</td>" +
+              "<td><span class='badge " + badgeClassByCt(item.performance) + "'>" + String(item.performance || "average").toUpperCase() + "</span></td>";
+            ctBody.appendChild(row);
+          });
+        }
+      }
+
+      if (semesterCgpaBody) {
+        semesterCgpaBody.innerHTML = "";
+        if (!semesterItems.length) {
+          var emptySemester = document.createElement("tr");
+          emptySemester.innerHTML = "<td colspan='4' class='muted'>No semester CGPA data found.</td>";
+          semesterCgpaBody.appendChild(emptySemester);
+        } else {
+          semesterItems.forEach(function (item) {
+            var row = document.createElement("tr");
+            row.innerHTML =
+              "<td>" + (item.semesterLabel || "") + "</td>" +
+              "<td>" + Number(item.cgpa || 0).toFixed(2) + "</td>" +
+              "<td><span class='badge " + badgeClassByTrend(item.trend) + "'>" + String(item.trend || "stable").toUpperCase() + "</span></td>" +
+              "<td>" + formatDate(item.updatedAt) + "</td>";
+            semesterCgpaBody.appendChild(row);
+          });
+        }
+      }
+
+      if (summaryStandingEl) summaryStandingEl.textContent = summary.standing || "At Risk";
+      if (summaryOverallEl) summaryOverallEl.textContent = Number(summary.overallCgpa || 0).toFixed(2);
+      if (summaryCurrentEl) summaryCurrentEl.textContent = Number(summary.currentSemesterCgpa || 0).toFixed(2);
+      if (summaryAttendanceEl) summaryAttendanceEl.textContent = Number(summary.avgAttendance || 0).toFixed(1) + "%";
+      if (summaryCtEl) summaryCtEl.textContent = Number(summary.avgCtPercent || 0).toFixed(1) + "%";
+      if (summarySuggestionEl) summarySuggestionEl.textContent = summary.suggestion || "No suggestion available.";
+    }).catch(function (error) {
+      showToast(error.message || "Could not load student report.");
+    });
+  }
+
+  function initRoleNoticeBoards() {
+    var isStudentDashboard = /student-dashboard\.html$/i.test(window.location.pathname);
+    var isAdvisorDashboard = /advisor-dashboard\.html$/i.test(window.location.pathname);
+    if (!isStudentDashboard && !isAdvisorDashboard) return;
+
+    var tableBody = isStudentDashboard
+      ? document.getElementById("studentNoticeTableBody")
+      : document.getElementById("advisorNoticeTableBody");
+    if (!tableBody) return;
+
+    function priorityBadge(priority) {
+      var p = String(priority || "").toLowerCase();
+      if (p === "urgent") return "badge-danger";
+      if (p === "important") return "badge-warning";
+      return "badge-success";
+    }
+
+    function targetLabel(target) {
+      if (target === "students_advisors") return "Students + Advisors";
+      if (target === "advisors") return "Advisors";
+      return "Students";
+    }
+
+    function renderNotices(items) {
+      tableBody.innerHTML = "";
+      if (!items.length) {
+        var emptyRow = document.createElement("tr");
+        emptyRow.innerHTML = "<td colspan='4' class='muted'>No notices published yet.</td>";
+        tableBody.appendChild(emptyRow);
+        return;
+      }
+
+      items.slice(0, 8).forEach(function (item) {
+        var row = document.createElement("tr");
+        var badgeCls = priorityBadge(item.priority);
+        row.innerHTML =
+          "<td>" + formatDate(item.publishedAt || item.createdAt || item.updatedAt) + "</td>" +
+          "<td>" + (item.title || "Notice") + "</td>" +
+          "<td><span class='badge " + badgeCls + "'>" + String(item.priority || "normal").toUpperCase() + "</span></td>" +
+          "<td>" + targetLabel(item.target) + "</td>";
+        tableBody.appendChild(row);
+      });
+    }
+
+    apiRequest("/portal/notices", { method: "GET" }).then(function (payload) {
+      var items = (((payload || {}).data || {}).items) || [];
+      renderNotices(items);
+    }).catch(function () {
+      var fallback = safeRead(STORAGE_KEYS.notices, []);
+      renderNotices(fallback);
+    });
   }
 
   function initCumulativeCgpaPage() {
@@ -1721,8 +2093,45 @@
 
     function statusClass(status) {
       var value = String(status || "").toLowerCase();
-      if (value === "new" || value === "pending") return "badge-warning";
+      if (value === "new") return "badge-warning";
       return "badge-success";
+    }
+
+    function renderPanelNotices(tableBodyId) {
+      var body = document.getElementById(tableBodyId);
+      if (!body) return;
+
+      function badgeCls(priority) {
+        var p = String(priority || "").toLowerCase();
+        if (p === "urgent") return "badge-danger";
+        if (p === "important") return "badge-warning";
+        return "badge-success";
+      }
+
+      apiRequest("/portal/notices", { method: "GET" }).then(function (payload) {
+        var items = (((payload || {}).data || {}).items) || [];
+        body.innerHTML = "";
+        if (!items.length) {
+          var empty = document.createElement("tr");
+          empty.innerHTML = "<td colspan='3' class='muted'>No notices found.</td>";
+          body.appendChild(empty);
+          return;
+        }
+
+        items.slice(0, 8).forEach(function (item) {
+          var row = document.createElement("tr");
+          row.innerHTML =
+            "<td>" + formatDate(item.publishedAt || item.createdAt || item.updatedAt) + "</td>" +
+            "<td>" + (item.title || "Notice") + "</td>" +
+            "<td><span class='badge " + badgeCls(item.priority) + "'>" + String(item.priority || "normal").toUpperCase() + "</span></td>";
+          body.appendChild(row);
+        });
+      }).catch(function () {
+        body.innerHTML = "";
+        var err = document.createElement("tr");
+        err.innerHTML = "<td colspan='3' class='muted'>Could not load notices.</td>";
+        body.appendChild(err);
+      });
     }
 
     function loadMessagesFromApi(callback) {
@@ -1736,20 +2145,88 @@
 
     if (isStudentPage) {
       var studentForm = document.querySelector("form");
-      var tableBody = document.querySelector("table tbody");
+      var tableBody = document.getElementById("studentMessageTableBody") || document.querySelector("table tbody");
+      var advisorSelectEl = document.getElementById("advisor");
       var meetingDateEl = document.getElementById("meetingDate");
       var meetingSlotEl = document.getElementById("meetingSlot");
       var meetingModeEl = document.getElementById("meetingMode");
-      if (studentForm && tableBody) {
-        loadMessagesFromApi(function (items) {
-          tableBody.innerHTML = "";
-          items.filter(function (msg) {
-            return msg.from === "student";
-          }).forEach(function (msg) {
-            var row = document.createElement("tr");
-            row.innerHTML = "<td>" + formatDate(msg.date) + "</td><td>" + (msg.subject || "") + "</td><td><span class='badge " + statusClass(msg.status) + "'>" + (msg.status || "Pending") + "</span></td>";
-            tableBody.appendChild(row);
+      var detailTitleEl = document.getElementById("studentMessageDetailSubject");
+      var detailMetaEl = document.getElementById("studentMessageDetailMeta");
+      var detailBodyEl = document.getElementById("studentMessageDetailBody");
+
+      function renderStudentMessageRows(items) {
+        tableBody.innerHTML = "";
+        var visible = items.filter(function (msg) {
+          return msg.from === "student" || msg.to === "student";
+        });
+
+        if (!visible.length) {
+          var emptyRow = document.createElement("tr");
+          emptyRow.innerHTML = "<td colspan='3' class='muted'>No messages found.</td>";
+          tableBody.appendChild(emptyRow);
+          if (detailTitleEl) detailTitleEl.textContent = "No message selected";
+          if (detailMetaEl) detailMetaEl.textContent = "No message selected.";
+          if (detailBodyEl) detailBodyEl.textContent = "Send a message or wait for advisor response.";
+          return;
+        }
+
+        function showMessageDetails(msg) {
+          var direction = msg.to === "student" ? "Received from advisor" : "Sent to advisor";
+          if (detailTitleEl) detailTitleEl.textContent = msg.subject || "(No Subject)";
+          if (detailMetaEl) detailMetaEl.textContent = formatDate(msg.date) + " | " + direction;
+          if (detailBodyEl) detailBodyEl.textContent = msg.message || "No message body.";
+        }
+
+        visible.forEach(function (msg, idx) {
+          var direction = msg.to === "student" ? "Received" : "Sent";
+          var row = document.createElement("tr");
+          row.style.cursor = "pointer";
+          row.innerHTML = "<td>" + formatDate(msg.date) + "</td><td>" + (msg.subject || "") + "</td><td><span class='badge " + statusClass(msg.status) + "'>" + direction + "</span></td>";
+          row.addEventListener("click", function () {
+            showMessageDetails(msg);
           });
+          tableBody.appendChild(row);
+
+          if (idx === 0) {
+            showMessageDetails(msg);
+          }
+        });
+      }
+
+      function loadAssignedAdvisor() {
+        if (!advisorSelectEl) return;
+
+        apiRequest("/portal/student/advisor", { method: "GET" }).then(function (payload) {
+          var advisor = (((payload || {}).data || {}).advisor) || null;
+          advisorSelectEl.innerHTML = "";
+
+          if (!advisor || !advisor.advisorName) {
+            var noOpt = document.createElement("option");
+            noOpt.value = "";
+            noOpt.textContent = "No advisor assigned yet";
+            advisorSelectEl.appendChild(noOpt);
+            return;
+          }
+
+          var option = document.createElement("option");
+          option.value = advisor.advisorName;
+          option.textContent = advisor.advisorName + " (Batch " + String(advisor.batch || "") + ")";
+          advisorSelectEl.appendChild(option);
+          advisorSelectEl.value = advisor.advisorName;
+        }).catch(function () {
+          if (!advisorSelectEl.options.length) {
+            var fallback = document.createElement("option");
+            fallback.value = "";
+            fallback.textContent = "No advisor assigned yet";
+            advisorSelectEl.appendChild(fallback);
+          }
+        });
+      }
+
+      if (studentForm && tableBody) {
+        loadAssignedAdvisor();
+        loadMessagesFromApi(function (items) {
+          renderStudentMessageRows(items);
         });
 
         studentForm.addEventListener("submit", function (event) {
@@ -1760,6 +2237,11 @@
           var meetingDate = (meetingDateEl || {}).value || "";
           var meetingSlot = (meetingSlotEl || {}).value || "";
           var meetingMode = (meetingModeEl || {}).value || "in-person";
+
+          if (!advisor.trim()) {
+            showToast("No advisor is assigned for your account yet.");
+            return;
+          }
 
           if (!subject.trim() || !message.trim()) {
             showToast("Please fill subject and message.");
@@ -1801,19 +2283,12 @@
               to: "advisor",
               subject: finalSubject,
               message: meetingDetails,
-              status: "pending"
+              status: "sent"
             });
             safeWrite(STORAGE_KEYS.messages, messages);
             studentForm.reset();
             loadMessagesFromApi(function (items) {
-              tableBody.innerHTML = "";
-              items.filter(function (msg) {
-                return msg.from === "student";
-              }).forEach(function (msg) {
-                var row = document.createElement("tr");
-                row.innerHTML = "<td>" + formatDate(msg.date) + "</td><td>" + (msg.subject || "") + "</td><td><span class='badge " + statusClass(msg.status) + "'>" + (msg.status || "Pending") + "</span></td>";
-                tableBody.appendChild(row);
-              });
+              renderStudentMessageRows(items);
             });
             showToast("Meeting request sent to advisor.");
           }).catch(function (error) {
@@ -1826,6 +2301,36 @@
     if (isAdvisorPage) {
       var advisorTableBody = document.querySelector("table tbody");
       var advisorForm = document.querySelectorAll("form")[0];
+      var toStudentSelect = document.getElementById("toStudent");
+      renderPanelNotices("advisorNoticePanelBody");
+
+      function loadAssignedStudentsForAdvisor() {
+        if (!toStudentSelect) return;
+        apiRequest("/portal/advisor/students", { method: "GET" }).then(function (payload) {
+          var items = (((payload || {}).data || {}).items) || [];
+          toStudentSelect.innerHTML = "";
+
+          if (!items.length) {
+            var emptyOpt = document.createElement("option");
+            emptyOpt.value = "";
+            emptyOpt.textContent = "No assigned students found";
+            toStudentSelect.appendChild(emptyOpt);
+            return;
+          }
+
+          items.forEach(function (item) {
+            var opt = document.createElement("option");
+            opt.value = item.userId || "";
+            opt.dataset.studentName = item.name || "Student";
+            opt.textContent = item.name + " (" + item.studentId + ") - Batch " + item.batch;
+            toStudentSelect.appendChild(opt);
+          });
+        }).catch(function () {
+          // Keep static fallback options already in HTML.
+        });
+      }
+
+      loadAssignedStudentsForAdvisor();
 
       if (advisorTableBody) {
         loadMessagesFromApi(function (items) {
@@ -1851,11 +2356,14 @@
             return;
           }
 
-          var studentName = String(toStudent).split("(")[0].trim();
+          var selectedOption = toStudentSelect ? toStudentSelect.options[toStudentSelect.selectedIndex] : null;
+          var studentName = selectedOption ? (selectedOption.dataset.studentName || selectedOption.text || "Student") : "Student";
+          var targetStudentUserId = toStudent || "";
           apiRequest("/portal/messages", {
             method: "POST",
             body: {
               toRole: "student",
+              toUserId: targetStudentUserId,
               toName: studentName,
               subject: subject.trim(),
               content: sms.trim(),
@@ -1883,33 +2391,108 @@
     }
 
     if (isDangerPage) {
-      var smsButtons = document.querySelectorAll("button.btn.btn-primary[type='button']");
+      var watchlistBody = document.getElementById("advisorWatchlistBody");
       var smsForm = document.querySelector("form");
       var studentSelect = document.getElementById("student");
+      var smsMessageEl = document.getElementById("message");
 
-      smsButtons.forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          var row = btn.closest("tr");
-          if (!row) return;
-          var studentText = row.children[0].textContent.trim();
-          if (studentSelect) {
-            var opts = Array.from(studentSelect.options);
-            var found = opts.find(function (opt) {
-              return studentText.indexOf(opt.text) === 0 || opt.text.indexOf(studentText) === 0;
-            });
-            if (found) {
-              studentSelect.value = found.value;
-            }
+      function riskBadgeClass(risk) {
+        var r = String(risk || "").toLowerCase();
+        if (r === "high") return "badge-danger";
+        if (r === "medium") return "badge-warning";
+        return "badge-success";
+      }
+
+      function populateStudentSelect(items) {
+        if (!studentSelect) return;
+        studentSelect.innerHTML = "";
+
+        if (!items.length) {
+          var emptyOption = document.createElement("option");
+          emptyOption.value = "";
+          emptyOption.textContent = "No at-risk students found";
+          studentSelect.appendChild(emptyOption);
+          return;
+        }
+
+        items.forEach(function (item) {
+          var option = document.createElement("option");
+          option.value = item.userId || "";
+          option.dataset.studentName = item.name || "Student";
+          option.textContent = (item.name || "Student") + " (" + (item.studentId || "") + ")";
+          studentSelect.appendChild(option);
+        });
+      }
+
+      function renderWatchlist(items) {
+        if (!watchlistBody) return;
+        watchlistBody.innerHTML = "";
+
+        if (!items.length) {
+          var emptyRow = document.createElement("tr");
+          emptyRow.innerHTML = "<td colspan='5' class='muted'>No very low-performing assigned students found.</td>";
+          watchlistBody.appendChild(emptyRow);
+          return;
+        }
+
+        items.forEach(function (item) {
+          var row = document.createElement("tr");
+          row.innerHTML =
+            "<td>" + (item.name || "Student") + " (" + (item.studentId || "") + ")</td>" +
+            "<td>" + Number(item.currentCgpa || 0).toFixed(2) + "</td>" +
+            "<td><span class='badge " + riskBadgeClass(item.attendanceRisk) + "'>" + String(item.attendanceRisk || "low").toUpperCase() + "</span></td>" +
+            "<td><span class='badge " + riskBadgeClass(item.ctRisk) + "'>" + String(item.ctRisk || "low").toUpperCase() + "</span></td>" +
+            "<td><button class='btn btn-primary' type='button' data-action='quick-sms' data-user-id='" + (item.userId || "") + "' data-student-name='" + (item.name || "Student") + "'>Send SMS for Meeting</button></td>";
+          watchlistBody.appendChild(row);
+        });
+      }
+
+      function loadWatchlist() {
+        apiRequest("/portal/advisor/performance-watchlist", { method: "GET" }).then(function (payload) {
+          var items = (((payload || {}).data || {}).items) || [];
+          renderWatchlist(items);
+          populateStudentSelect(items);
+        }).catch(function (error) {
+          if (watchlistBody) {
+            watchlistBody.innerHTML = "";
+            var errRow = document.createElement("tr");
+            errRow.innerHTML = "<td colspan='5' class='muted'>Could not load watchlist.</td>";
+            watchlistBody.appendChild(errRow);
+          }
+          populateStudentSelect([]);
+          showToast(error.message || "Could not load performance watchlist.");
+        });
+      }
+
+      if (watchlistBody) {
+        watchlistBody.addEventListener("click", function (event) {
+          var btn = event.target.closest("button[data-action='quick-sms']");
+          if (!btn || !studentSelect) return;
+          var userId = btn.getAttribute("data-user-id") || "";
+          if (userId) {
+            studentSelect.value = userId;
+          }
+          if (smsMessageEl && !smsMessageEl.value.trim()) {
+            var studentName = btn.getAttribute("data-student-name") || "Student";
+            smsMessageEl.value = "Please meet me this week regarding your current academic performance and an improvement plan, " + studentName + ".";
           }
           showToast("Student selected for quick SMS.");
         });
-      });
+      }
+
+      loadWatchlist();
 
       if (smsForm) {
         smsForm.addEventListener("submit", function (event) {
           event.preventDefault();
-          var student = (document.getElementById("student") || {}).value || "Student";
+          var targetUserId = (document.getElementById("student") || {}).value || "";
+          var selectedOption = studentSelect ? studentSelect.options[studentSelect.selectedIndex] : null;
+          var studentName = selectedOption ? (selectedOption.dataset.studentName || selectedOption.text || "Student") : "Student";
           var message = (document.getElementById("message") || {}).value || "";
+          if (!targetUserId) {
+            showToast("Please select a student first.");
+            return;
+          }
           if (!message.trim()) {
             showToast("Please write an SMS before sending.");
             return;
@@ -1919,8 +2502,9 @@
             method: "POST",
             body: {
               toRole: "student",
-              toName: student,
-              subject: "Risk Meeting",
+              toUserId: targetUserId,
+              toName: studentName,
+              subject: "Performance Consultation Meeting",
               content: message.trim(),
               channel: "sms"
             }
@@ -1930,12 +2514,13 @@
               date: new Date().toISOString(),
               from: "advisor",
               to: "student",
-              studentName: student,
-              subject: "Risk Meeting",
+              studentName: studentName,
+              subject: "Performance Consultation Meeting",
               message: message.trim(),
               status: "sent"
             });
             safeWrite(STORAGE_KEYS.messages, messages);
+            smsForm.reset();
             showToast("SMS sent successfully.");
           }).catch(function (error) {
             showToast(error.message || "Failed to send SMS.");
@@ -1943,6 +2528,70 @@
         });
       }
     }
+  }
+
+  function initRoleNoticePages() {
+    var isStudentNoticePage = /student-notices\.html$/i.test(window.location.pathname);
+    var isAdvisorNoticePage = /advisor-notices\.html$/i.test(window.location.pathname);
+    if (!isStudentNoticePage && !isAdvisorNoticePage) return;
+
+    var tableBody = document.getElementById("roleNoticePageTableBody");
+    var detailTitle = document.getElementById("roleNoticePageDetailTitle");
+    var detailMeta = document.getElementById("roleNoticePageDetailMeta");
+    var detailBody = document.getElementById("roleNoticePageDetailBody");
+    if (!tableBody) return;
+
+    function badgeCls(priority) {
+      var p = String(priority || "").toLowerCase();
+      if (p === "urgent") return "badge-danger";
+      if (p === "important") return "badge-warning";
+      return "badge-success";
+    }
+
+    function targetLabel(target) {
+      if (target === "students_advisors") return "Students + Advisors";
+      if (target === "advisors") return "Advisors";
+      return "Students";
+    }
+
+    function showNoticeDetail(item) {
+      if (detailTitle) detailTitle.textContent = item.title || "Notice";
+      if (detailMeta) detailMeta.textContent = formatDate(item.publishedAt || item.createdAt || item.updatedAt) + " | " + targetLabel(item.target) + " | " + String(item.priority || "normal").toUpperCase();
+      if (detailBody) detailBody.textContent = item.content || "No details available.";
+    }
+
+    function render(items) {
+      tableBody.innerHTML = "";
+      if (!items.length) {
+        var empty = document.createElement("tr");
+        empty.innerHTML = "<td colspan='4' class='muted'>No notices found.</td>";
+        tableBody.appendChild(empty);
+        return;
+      }
+
+      items.forEach(function (item, idx) {
+        var row = document.createElement("tr");
+        row.style.cursor = "pointer";
+        row.innerHTML =
+          "<td>" + formatDate(item.publishedAt || item.createdAt || item.updatedAt) + "</td>" +
+          "<td>" + (item.title || "Notice") + "</td>" +
+          "<td><span class='badge " + badgeCls(item.priority) + "'>" + String(item.priority || "normal").toUpperCase() + "</span></td>" +
+          "<td>" + targetLabel(item.target) + "</td>";
+        row.addEventListener("click", function () {
+          showNoticeDetail(item);
+        });
+        tableBody.appendChild(row);
+
+        if (idx === 0) showNoticeDetail(item);
+      });
+    }
+
+    apiRequest("/portal/notices", { method: "GET" }).then(function (payload) {
+      var items = (((payload || {}).data || {}).items) || [];
+      render(items);
+    }).catch(function () {
+      render([]);
+    });
   }
 
   document.addEventListener("DOMContentLoaded", function () {
@@ -1957,6 +2606,9 @@
     initAdminNotices();
     initAdvisorAssignment();
     initAdvisorRanking();
+    initAdvisorStudentProfile();
+    initRoleNoticeBoards();
+    initRoleNoticePages();
     initCumulativeCgpaPage();
     initMessages();
   });

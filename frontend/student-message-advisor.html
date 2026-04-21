@@ -33,6 +33,7 @@
     <a class="nav-link" href="student-ct-marks.html">Marks</a>
     <a class="nav-link" href="student-semester-cgpa.html">CGPA</a>
     <a class="nav-link" href="student-running-semester-cgpa.html">Running Calculator</a>
+    <a class="nav-link" href="student-notices.html">Notices</a>
     <a class="nav-link" href="student-message-advisor.html">Messages</a>
   </nav>
 
@@ -108,10 +109,10 @@
             <tr>
               <th>Date</th>
               <th>Subject</th>
-              <th>Status</th>
+              <th>Direction</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="studentMessageTableBody">
             <tr>
               <td>26 Mar 2026</td>
               <td>Request for attendance counseling</td>
@@ -125,6 +126,14 @@
           </tbody>
         </table>
       </div>
+      <p class="muted mt-12">Click a message row to see full details below.</p>
+    </section>
+
+    <section class="card" class="mt-18">
+      <h3>Message Details</h3>
+      <p><strong id="studentMessageDetailSubject">Select a message</strong></p>
+      <p class="muted" id="studentMessageDetailMeta">No message selected.</p>
+      <div class="alert" id="studentMessageDetailBody">Click any row from Recent Messages to view full content.</div>
     </section>
   </main>
 

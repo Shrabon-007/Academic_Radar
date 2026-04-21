@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Danger Zone Students | Academic Radar</title>
+  <title>Performance Watchlist | Academic Radar</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -29,16 +29,16 @@
   <nav class="nav-links">
     <a class="nav-link" href="advisor-dashboard.html">Overview</a>
     <a class="nav-link" href="advisor-student-ranking.html">Student Ranking</a>
-    <a class="nav-link" href="advisor-danger-zone.html">Danger Zone</a>
+    <a class="nav-link" href="advisor-danger-zone.html">Performance Watchlist</a>
     <a class="nav-link" href="advisor-messages.html">Messages</a>
   </nav>
 
   <main class="page">
-    <h1 class="section-title">Suggested Danger Zone Students</h1>
-    <p class="section-subtitle">Students identified by low attendance, weak CT marks, and CGPA decline.</p>
+    <h1 class="section-title">Performance Watchlist</h1>
+    <p class="section-subtitle">Assigned students with very low current performance based on CGPA, attendance, and CT indicators.</p>
 
     <section class="card">
-      <h3>Risk List and Meeting SMS</h3>
+      <h3>At-Risk Students and Meeting SMS</h3>
       <div class="table-wrap">
         <table>
           <thead>
@@ -50,21 +50,8 @@
               <th>Action</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td>Mehedi Hasan (221-15-1240)</td>
-              <td>2.41</td>
-              <td><span class="badge badge-danger">High</span></td>
-              <td><span class="badge badge-danger">High</span></td>
-              <td><button class="btn btn-primary" type="button">Send SMS for Meeting</button></td>
-            </tr>
-            <tr>
-              <td>Samia Akter (221-15-1242)</td>
-              <td>2.67</td>
-              <td><span class="badge badge-warning">Medium</span></td>
-              <td><span class="badge badge-warning">Medium</span></td>
-              <td><button class="btn btn-primary" type="button">Send SMS for Meeting</button></td>
-            </tr>
+          <tbody id="advisorWatchlistBody">
+            <tr><td colspan="5" class="muted">Loading performance watchlist...</td></tr>
           </tbody>
         </table>
       </div>
@@ -76,8 +63,7 @@
         <div class="form-group">
           <label for="student">Select Student</label>
           <select id="student">
-            <option>Mehedi Hasan (221-15-1240)</option>
-            <option>Samia Akter (221-15-1242)</option>
+            <option value="">Loading students...</option>
           </select>
         </div>
         <div class="form-group">

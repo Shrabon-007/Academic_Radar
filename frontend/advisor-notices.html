@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advisor Notices | Academic Radar</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="advisor-dashboard.html" class="brand brand-title">
+        Academic Radar <br><span class="brand-subtitle">Advisor Portal</span>
+      </a>
+      <div class="user-info">
+        <div class="avatar avatar-sm">u</div>
+        <div class="user-info-text">
+          <span>Advisor Name <span class="role-badge badge-advisor">Advisor</span></span>
+        </div>
+        <a href="advisor-login.html" class="logout-link">Log out</a>
+      </div>
+    </div>
+  </header>
+
+  <nav class="nav-links">
+    <a class="nav-link" href="advisor-dashboard.html">Overview</a>
+    <a class="nav-link" href="advisor-student-ranking.html">Student Ranking</a>
+    <a class="nav-link" href="advisor-danger-zone.html">Performance Watchlist</a>
+    <a class="nav-link" href="advisor-notices.html">Notices</a>
+    <a class="nav-link" href="advisor-messages.html">Messages</a>
+  </nav>
+
+  <main class="page">
+    <h1 class="section-title">Advisor Notices</h1>
+    <p class="section-subtitle">All published notices for advisors and shared notices.</p>
+
+    <section class="grid grid-2">
+      <article class="card">
+        <h3>Notice List</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Title</th>
+                <th>Priority</th>
+                <th>Audience</th>
+              </tr>
+            </thead>
+            <tbody id="roleNoticePageTableBody">
+              <tr><td colspan="4" class="muted">Loading notices...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="muted mt-12">Click any notice row to view full details.</p>
+      </article>
+
+      <article class="card">
+        <h3>Notice Details</h3>
+        <p><strong id="roleNoticePageDetailTitle">Select a notice</strong></p>
+        <p class="muted" id="roleNoticePageDetailMeta">No notice selected.</p>
+        <div class="alert" id="roleNoticePageDetailBody">Click a notice row to read full content.</div>
+      </article>
+    </section>
+  </main>
+
+  <script src='app.js'></script>
+</body>
+</html>

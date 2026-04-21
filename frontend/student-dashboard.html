@@ -33,6 +33,7 @@
     <a class="nav-link" href="student-ct-marks.html">Marks</a>
     <a class="nav-link" href="student-semester-cgpa.html">CGPA</a>
     <a class="nav-link" href="student-running-semester-cgpa.html">Running Calculator</a>
+    <a class="nav-link" href="student-notices.html">Notices</a>
     <a class="nav-link" href="student-message-advisor.html">Messages</a>
   </nav>
 
@@ -88,6 +89,26 @@
           <p class="muted">Contact your advisor</p>
         </a>
       </div>
+
+      <section class="card mt-18">
+        <h3>Latest Notices</h3>
+        <p class="muted">Notices sent to students and shared notices are shown here.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Title</th>
+                <th>Priority</th>
+                <th>Audience</th>
+              </tr>
+            </thead>
+            <tbody id="studentNoticeTableBody">
+              <tr><td colspan="4" class="muted">Loading notices...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </section>
   </main>
 
