@@ -16,4 +16,3 @@ backend/.env
 backend/*.log
 
 pkg/
-src/
