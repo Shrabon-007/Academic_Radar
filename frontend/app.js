@@ -4,6 +4,7 @@
   var STORAGE_KEYS = {
     session: "ar_session_v1",
     attendance: "ar_attendance_v1",
+    ctMarks: "ar_ct_marks_v1",
     courses: "ar_courses_v1",
     semesterSetup: "ar_semester_setup_v1",
     semesterCgpa: "ar_semester_cgpa_v1",
@@ -29,6 +30,17 @@
     "student-cumulative-cgpa.html": "student",
     "student-message-advisor.html": "student"
   };
+
+  var SEMESTER_LABELS = [
+    "Level-1 Term-1",
+    "Level-1 Term-2",
+    "Level-2 Term-1",
+    "Level-2 Term-2",
+    "Level-3 Term-1",
+    "Level-3 Term-2",
+    "Level-4 Term-1",
+    "Level-4 Term-2"
+  ];
 
   function safeRead(key, fallback) {
     try {
@@ -315,41 +327,203 @@
     });
   }
 
+  function ensureSemesterOptions(selectEl) {
+    if (!selectEl) return;
+    var current = selectEl.value;
+    selectEl.innerHTML = "";
+
+    SEMESTER_LABELS.forEach(function (label) {
+      var option = document.createElement("option");
+      option.value = label;
+      option.textContent = label;
+      selectEl.appendChild(option);
+    });
+
+    if (current && SEMESTER_LABELS.indexOf(current) >= 0) {
+      selectEl.value = current;
+    }
+  }
+
+  function getCtPolicy(courseType, credit) {
+    var type = String(courseType || "theory").toLowerCase();
+    var value = Number(credit || 0);
+
+    if (type === "lab") {
+      return { totalCt: 0, bestCount: 0, maxMarks: 0, label: "No CT (Lab)" };
+    }
+
+    if (value >= 4) {
+      return { totalCt: 5, bestCount: 4, maxMarks: 80, label: "5 CT, best 4 (80)" };
+    }
+
+    if (value >= 3) {
+      return { totalCt: 4, bestCount: 3, maxMarks: 60, label: "4 CT, best 3 (60)" };
+    }
+
+    if (value >= 2) {
+      return { totalCt: 3, bestCount: 2, maxMarks: 40, label: "3 CT, best 2 (40)" };
+    }
+
+    return { totalCt: 0, bestCount: 0, maxMarks: 0, label: "No CT" };
+  }
+
+  function getAttendanceMaxMark(credit, courseType) {
+    var type = String(courseType || "theory").toLowerCase();
+    var value = Number(credit || 0);
+
+    if (type === "lab") {
+      return Math.round(value * 10);
+    }
+
+    if (value >= 4) return 40;
+    if (value >= 3) return 30;
+    if (value >= 2) return 20;
+    return Math.round(value * 10);
+  }
+
+  function getAttendanceMark(percentage, credit, courseType) {
+    var maxMark = getAttendanceMaxMark(credit, courseType);
+
+    if (percentage >= 90) return Math.round(maxMark * 1.0);
+    if (percentage >= 85) return Math.round(maxMark * 0.9);
+    if (percentage >= 80) return Math.round(maxMark * 0.8);
+    if (percentage >= 75) return Math.round(maxMark * 0.7);
+    if (percentage >= 70) return Math.round(maxMark * 0.6);
+    if (percentage >= 65) return Math.round(maxMark * 0.5);
+    if (percentage >= 60) return Math.round(maxMark * 0.4);
+    return 0;
+  }
+
   function initAttendancePage() {
-    var summaryRows = document.querySelectorAll("tr[data-summary-course]");
-    var selectors = document.querySelectorAll("select.att-state[data-course]");
-    if (!summaryRows.length || !selectors.length) {
+    if (!/student-attendance\.html$/i.test(window.location.pathname)) {
       return;
     }
 
-    var courseCodes = Array.from(summaryRows).map(function (row) {
-      return row.getAttribute("data-summary-course");
-    });
+    var summaryBody = document.querySelector("section.card .table-wrap table tbody");
+    var gridHead = document.querySelector("table.attendance-grid thead tr");
+    var gridBody = document.querySelector("table.attendance-grid tbody");
+    if (!summaryBody || !gridHead || !gridBody) return;
 
-    var stored = safeRead(STORAGE_KEYS.attendance, {});
+    function normalizeCourses(items) {
+      return (items || []).map(function (item) {
+        var course = item.course || item;
+        return {
+          code: String(course.code || "").trim().toUpperCase(),
+          name: course.name || "Course",
+          credit: Number(course.credit || 3),
+          courseType: String(course.courseType || "theory").toLowerCase(),
+          semesterLabel: String(item.semesterLabel || course.semesterLabel || item.semester || course.semester || "Level-1 Term-1")
+        };
+      }).filter(function (c) { return c.code; });
+    }
 
-    selectors.forEach(function (select, index) {
-      if (stored[index] !== undefined) {
-        select.value = stored[index];
-      }
-    });
+    function makeCourseKey(semesterLabel, code) {
+      return String(semesterLabel || "") + "__" + String(code || "").toUpperCase();
+    }
 
-    function getPredictedMark(percent) {
-      if (percent >= 90) return 30;
-      if (percent >= 85) return 27;
-      if (percent >= 80) return 24;
-      return 0;
+    function getCourseList() {
+      return apiRequest("/portal/student/courses", { method: "GET" }).then(function (payload) {
+        var items = (((payload || {}).data || {}).items) || [];
+        return normalizeCourses(items);
+      }).catch(function () {
+        return normalizeCourses(safeRead(STORAGE_KEYS.courses, []));
+      });
+    }
+
+    function getAttendanceMap() {
+      return apiRequest("/portal/student/attendance", { method: "GET" }).then(function (payload) {
+        var rows = (((payload || {}).data || {}).items) || [];
+        var map = {};
+        rows.forEach(function (row) {
+          var course = row.course || {};
+          var key = makeCourseKey(row.semesterLabel, course.code);
+          if (!course.code) return;
+          map[key] = Array.isArray(row.classStates) ? row.classStates : [];
+        });
+        return map;
+      }).catch(function () {
+        return {};
+      });
     }
 
     function getRisk(percent) {
       if (percent >= 90) return { text: "Good", cls: "badge-success" };
-      if (percent >= 80) return { text: "Watch", cls: "badge-warning" };
+      if (percent >= 75) return { text: "Watch", cls: "badge-warning" };
+      if (percent >= 60) return { text: "Low", cls: "badge-warning" };
       return { text: "Critical", cls: "badge-danger" };
     }
 
-    function updateCourseSummary(courseCode) {
-      var courseSelects = document.querySelectorAll('select.att-state[data-course="' + courseCode + '"]');
-      var row = document.querySelector('tr[data-summary-course="' + courseCode + '"]');
+    function getCourseCredit(row) {
+      return Number((row && row.getAttribute("data-credit")) || 3);
+    }
+
+    function getCourseType(row) {
+      return String((row && row.getAttribute("data-course-type")) || "theory");
+    }
+
+    function buildAttendanceTables(courses) {
+      var useCourses = (courses && courses.length) ? courses : [
+        { code: "MAT-223", credit: 3, courseType: "theory" },
+        { code: "CSE-332", credit: 3, courseType: "theory" },
+        { code: "EEE-343", credit: 3, courseType: "theory" }
+      ];
+
+      summaryBody.innerHTML = "";
+      useCourses.forEach(function (course) {
+        var row = document.createElement("tr");
+        row.setAttribute("data-summary-course", course.code);
+        row.setAttribute("data-credit", String(course.credit));
+        row.setAttribute("data-course-type", course.courseType);
+        row.setAttribute("data-semester-label", course.semesterLabel);
+        row.innerHTML = "<td>" + course.code + "</td>" +
+          "<td>0</td>" +
+          "<td class='attended-cell'>0</td>" +
+          "<td class='percent-cell'>0%</td>" +
+          "<td class='mark-cell'>0 / " + getAttendanceMaxMark(course.credit, course.courseType) + "</td>" +
+          "<td><span class='badge risk-badge badge-danger'>Critical</span></td>";
+        summaryBody.appendChild(row);
+      });
+
+      gridHead.innerHTML = "";
+      var dayHeader = document.createElement("th");
+      dayHeader.textContent = "Class Day";
+      gridHead.appendChild(dayHeader);
+      useCourses.forEach(function (course) {
+        var th = document.createElement("th");
+        th.textContent = course.code;
+        gridHead.appendChild(th);
+      });
+
+      gridBody.innerHTML = "";
+      for (var day = 1; day <= 39; day++) {
+        var dayRow = document.createElement("tr");
+        dayRow.setAttribute("data-day", String(day));
+        var dayCell = document.createElement("td");
+        dayCell.textContent = "Class " + day;
+        dayRow.appendChild(dayCell);
+
+        useCourses.forEach(function (course) {
+          var td = document.createElement("td");
+          td.innerHTML = "<select class='att-state' data-course='" + course.code + "' data-semester-label='" + escapeHtml(course.semesterLabel) + "'><option value=''>-</option><option value='P'>P</option><option value='A'>A</option></select>";
+          dayRow.appendChild(td);
+        });
+
+        gridBody.appendChild(dayRow);
+      }
+
+      return useCourses;
+    }
+
+    function readStatesForCourse(course) {
+      var query = 'select.att-state[data-course="' + course.code + '"][data-semester-label="' + course.semesterLabel + '"]';
+      return Array.from(document.querySelectorAll(query)).map(function (el) {
+        return el.value || "-";
+      });
+    }
+
+    function updateCourseSummary(courseCode, semesterLabel) {
+      var courseSelects = document.querySelectorAll('select.att-state[data-course="' + courseCode + '"][data-semester-label="' + semesterLabel + '"]');
+      var row = document.querySelector('tr[data-summary-course="' + courseCode + '"][data-semester-label="' + semesterLabel + '"]');
       if (!row) return;
 
       var present = Array.from(courseSelects).filter(function (el) {
@@ -360,13 +534,14 @@
       }).length;
       var held = present + absent;
       var percent = held === 0 ? 0 : Math.round((present / held) * 100);
-      var mark = getPredictedMark(percent);
+      var mark = getAttendanceMark(percent, getCourseCredit(row), getCourseType(row));
       var risk = getRisk(percent);
+      var maxMark = getAttendanceMaxMark(getCourseCredit(row), getCourseType(row));
 
       row.children[1].textContent = String(held);
       row.querySelector(".attended-cell").textContent = String(present);
       row.querySelector(".percent-cell").textContent = percent + "%";
-      row.querySelector(".mark-cell").textContent = String(mark);
+      row.querySelector(".mark-cell").textContent = String(mark) + " / " + String(maxMark);
 
       var badge = row.querySelector(".risk-badge");
       if (badge) {
@@ -395,29 +570,76 @@
       }
     }
 
-    function runAll() {
-      courseCodes.forEach(updateCourseSummary);
-      updateOverall();
-      var values = Array.from(selectors).map(function (el) {
-        return el.value;
+    Promise.all([getCourseList(), getAttendanceMap()]).then(function (resolved) {
+      var courses = resolved[0] || [];
+      var attendanceMap = resolved[1] || {};
+      var courseList = buildAttendanceTables(courses);
+      var selectors = document.querySelectorAll("select.att-state[data-course]");
+      var stored = safeRead(STORAGE_KEYS.attendance, {});
+      var legacyStored = Array.isArray(stored) ? stored : null;
+
+      selectors.forEach(function (select, index) {
+        var code = select.getAttribute("data-course");
+        var semesterLabel = select.getAttribute("data-semester-label") || "Level-1 Term-1";
+        var key = makeCourseKey(semesterLabel, code);
+        var dayRow = select.closest("tr[data-day]");
+        var dayIndex = dayRow ? Number(dayRow.getAttribute("data-day") || 1) - 1 : 0;
+
+        if (attendanceMap[key] && attendanceMap[key][dayIndex] !== undefined) {
+          select.value = attendanceMap[key][dayIndex] || "";
+          return;
+        }
+
+        if (!legacyStored && stored[key] && stored[key][dayIndex] !== undefined) {
+          select.value = stored[key][dayIndex] || "";
+          return;
+        }
+
+        if (legacyStored && legacyStored[index] !== undefined) {
+          select.value = legacyStored[index] || "";
+        }
       });
-      safeWrite(STORAGE_KEYS.attendance, values);
-    }
 
-    selectors.forEach(function (select) {
-      select.addEventListener("change", runAll);
-    });
-
-    document.querySelectorAll("button").forEach(function (btn) {
-      if (/save attendance summary|save daily checklist/i.test(btn.textContent || "")) {
-        btn.addEventListener("click", function () {
-          runAll();
-          showToast("Attendance data saved locally.");
+      function runAll() {
+        courseList.forEach(function (course) {
+          updateCourseSummary(course.code, course.semesterLabel);
         });
+        updateOverall();
+        var values = {};
+        courseList.forEach(function (course) {
+          values[makeCourseKey(course.semesterLabel, course.code)] = readStatesForCourse(course);
+        });
+        safeWrite(STORAGE_KEYS.attendance, values);
       }
-    });
 
-    runAll();
+      selectors.forEach(function (select) {
+        select.addEventListener("change", runAll);
+      });
+
+      document.querySelectorAll("button").forEach(function (btn) {
+        if (/save attendance summary|save daily checklist/i.test(btn.textContent || "")) {
+          btn.addEventListener("click", function () {
+            runAll();
+            Promise.all(courseList.map(function (course) {
+              return apiRequest("/portal/student/attendance", {
+                method: "PUT",
+                body: {
+                  semesterLabel: course.semesterLabel,
+                  courseCode: course.code,
+                  classStates: readStatesForCourse(course)
+                }
+              });
+            })).then(function () {
+              showToast("Attendance saved to database.");
+            }).catch(function (error) {
+              showToast(error.message || "Attendance saved locally only.");
+            });
+          });
+        }
+      });
+
+      runAll();
+    });
   }
 
   function initCtMarksPage() {
@@ -425,75 +647,256 @@
       return;
     }
 
-    var rows = document.querySelectorAll("tbody tr");
-    if (!rows.length) return;
+    var tableBody = document.querySelector("section.card .table-wrap table tbody");
+    if (!tableBody) return;
 
-    function getPerformance(total) {
-      if (total >= 50) return { text: "Strong", cls: "badge-success" };
-      if (total >= 36) return { text: "Average", cls: "badge-warning" };
+    function normalizeCourses(items) {
+      return (items || []).map(function (item) {
+        var course = item.course || item;
+        return {
+          code: String(course.code || "").trim().toUpperCase(),
+          name: course.name || "Course",
+          credit: Number(course.credit || 3),
+          courseType: String(course.courseType || "theory").toLowerCase(),
+          semesterLabel: String(item.semesterLabel || course.semesterLabel || item.semester || course.semester || "Level-1 Term-1")
+        };
+      }).filter(function (c) { return c.code; });
+    }
+
+    function makeCourseKey(semesterLabel, code) {
+      return String(semesterLabel || "") + "__" + String(code || "").toUpperCase();
+    }
+
+    function getCourseList() {
+      return apiRequest("/portal/student/courses", { method: "GET" }).then(function (payload) {
+        var items = (((payload || {}).data || {}).items) || [];
+        return normalizeCourses(items);
+      }).catch(function () {
+        return normalizeCourses(safeRead(STORAGE_KEYS.courses, []));
+      });
+    }
+
+    function getCtMap() {
+      return apiRequest("/portal/student/ct-marks", { method: "GET" }).then(function (payload) {
+        var rows = (((payload || {}).data || {}).items) || [];
+        var map = {};
+        rows.forEach(function (row) {
+          var course = row.course || {};
+          if (!course.code) return;
+          map[makeCourseKey(row.semesterLabel, course.code)] = Array.isArray(row.ct) ? row.ct : [];
+        });
+        return map;
+      }).catch(function () {
+        return {};
+      });
+    }
+
+    function buildCtRows(courses) {
+      var useCourses = (courses && courses.length) ? courses : [
+        { code: "CSE-321", credit: 4, courseType: "theory" },
+        { code: "CSE-331", credit: 3, courseType: "theory" },
+        { code: "MAT-223", credit: 3, courseType: "theory" }
+      ];
+
+      tableBody.innerHTML = "";
+      useCourses.forEach(function (course) {
+        var policy = getCtPolicy(course.courseType, course.credit);
+        var row = document.createElement("tr");
+        row.setAttribute("data-course-type", course.courseType);
+        row.setAttribute("data-credit", String(course.credit));
+        row.setAttribute("data-course-code", course.code);
+        row.setAttribute("data-semester-label", course.semesterLabel);
+        row.innerHTML = "<td>" + course.code + "</td>" +
+          "<td>" + (course.courseType === "lab" ? "Lab" : "Theory") + "</td>" +
+          "<td>" + course.credit.toFixed(2).replace(/\.00$/, ".0") + "</td>" +
+          "<td><input type='number' value='0'></td>" +
+          "<td><input type='number' value='0'></td>" +
+          "<td><input type='number' value='0'></td>" +
+          "<td><input type='number' value='0'></td>" +
+          "<td><input type='number' value='0'></td>" +
+          "<td>" + policy.label + "</td>" +
+          "<td>0 / " + policy.maxMarks + "</td>" +
+          "<td><span class='badge badge-warning'>Average</span></td>";
+        tableBody.appendChild(row);
+      });
+    }
+
+    function getRows() {
+      return tableBody.querySelectorAll("tr");
+    }
+
+    function policyFromRow(row) {
+      var type = String(row.getAttribute("data-course-type") || "theory");
+      var credit = Number(row.getAttribute("data-credit") || 3);
+      return getCtPolicy(type, credit);
+    }
+
+    function getPerformance(earned, maximum) {
+      if (!maximum) return { text: "N/A", cls: "badge-warning" };
+      var ratio = earned / maximum;
+      if (ratio >= 0.8) return { text: "Strong", cls: "badge-success" };
+      if (ratio >= 0.6) return { text: "Average", cls: "badge-warning" };
       return { text: "Low", cls: "badge-danger" };
     }
 
+    function configureInputsForPolicy(row, policy) {
+      var inputs = row.querySelectorAll("input[type='number']");
+      inputs.forEach(function (input, idx) {
+        var active = idx < policy.totalCt;
+        input.disabled = !active;
+        if (!active) {
+          input.value = "0";
+          input.style.opacity = "0.45";
+        } else {
+          input.style.opacity = "1";
+        }
+      });
+    }
+
+    function computeBest(values, bestCount) {
+      var sorted = values.slice().sort(function (a, b) { return b - a; });
+      return sorted.slice(0, bestCount).reduce(function (acc, value) { return acc + value; }, 0);
+    }
+
     function recompute() {
-      var totals = [];
+      var rowsComputed = [];
 
-      rows.forEach(function (row) {
-        var inputs = row.querySelectorAll("input[type='number']");
-        if (!inputs.length) return;
+      Array.from(getRows()).forEach(function (row) {
+        var policy = policyFromRow(row);
+        configureInputsForPolicy(row, policy);
 
-        var sum = 0;
-        inputs.forEach(function (input) {
+        var inputs = Array.from(row.querySelectorAll("input[type='number']"));
+        var activeInputs = inputs.slice(0, policy.totalCt);
+        var values = activeInputs.map(function (input) {
           var val = Number(input.value) || 0;
           if (val < 0) val = 0;
           if (val > 20) val = 20;
           input.value = String(val);
-          sum += val;
+          return val;
         });
 
-        totals.push(sum);
-        var totalCell = row.children[4];
+        var total = computeBest(values, policy.bestCount);
+        var policyCell = row.children[7];
+        var totalCell = row.children[8];
         var badge = row.querySelector("td:last-child .badge");
-        if (totalCell) totalCell.textContent = String(sum);
+
+        if (policyCell) policyCell.textContent = policy.label;
+        if (totalCell) totalCell.textContent = String(total) + " / " + String(policy.maxMarks);
         if (badge) {
-          var perf = getPerformance(sum);
+          var perf = getPerformance(total, policy.maxMarks);
           badge.className = "badge " + perf.cls;
           badge.textContent = perf.text;
         }
+
+        rowsComputed.push({
+          course: row.children[0].textContent.trim(),
+          total: total,
+          max: policy.maxMarks
+        });
       });
 
-      if (!totals.length) return;
-      var average = Math.round(totals.reduce(function (a, b) { return a + b; }, 0) / totals.length);
+      if (!rowsComputed.length) return;
+
+      var ratios = rowsComputed.filter(function (x) { return x.max > 0; }).map(function (x) {
+        return (x.total / x.max) * 100;
+      });
+      var average = ratios.length ? Math.round(ratios.reduce(function (a, b) { return a + b; }, 0) / ratios.length) : 0;
+
       var avgStrong = document.querySelectorAll(".stats strong")[0];
       if (avgStrong) {
-        avgStrong.textContent = String(average);
+        avgStrong.textContent = String(average) + "%";
       }
 
-      var bestIndex = totals.indexOf(Math.max.apply(null, totals));
-      var lowIndex = totals.indexOf(Math.min.apply(null, totals));
-      var courseNames = Array.from(rows).map(function (row) { return row.children[0].textContent.trim(); });
+      var best = rowsComputed.slice().sort(function (a, b) {
+        var ra = a.max ? a.total / a.max : 0;
+        var rb = b.max ? b.total / b.max : 0;
+        return rb - ra;
+      })[0];
+
+      var low = rowsComputed.slice().sort(function (a, b) {
+        var ra = a.max ? a.total / a.max : 0;
+        var rb = b.max ? b.total / b.max : 0;
+        return ra - rb;
+      })[0];
+
       var statStrongEls = document.querySelectorAll(".grid.grid-3 .stats strong");
-      if (statStrongEls[1]) {
-        statStrongEls[1].textContent = courseNames[bestIndex] || "-";
+      if (statStrongEls[1] && best) {
+        statStrongEls[1].textContent = best.course;
       }
-      if (statStrongEls[2]) {
-        statStrongEls[2].textContent = courseNames[lowIndex] || "-";
+      if (statStrongEls[2] && low) {
+        statStrongEls[2].textContent = low.course;
       }
+
+      var ctStore = {};
+      Array.from(getRows()).forEach(function (row) {
+        var code = row.getAttribute("data-course-code") || row.children[0].textContent.trim();
+        var semesterLabel = row.getAttribute("data-semester-label") || "Level-1 Term-1";
+        ctStore[makeCourseKey(semesterLabel, code)] = Array.from(row.querySelectorAll("input[type='number']")).map(function (input) {
+          return Number(input.value) || 0;
+        });
+      });
+      safeWrite(STORAGE_KEYS.ctMarks, ctStore);
     }
 
-    document.querySelectorAll("input[type='number']").forEach(function (input) {
-      input.addEventListener("input", recompute);
-    });
-
-    document.querySelectorAll("button").forEach(function (btn) {
-      if (/save ct marks/i.test(btn.textContent || "")) {
-        btn.addEventListener("click", function () {
-          recompute();
-          showToast("CT marks saved locally.");
+    function bindCtEvents() {
+      Array.from(getRows()).forEach(function (row) {
+        row.querySelectorAll("input[type='number']").forEach(function (input) {
+          input.addEventListener("input", recompute);
         });
-      }
-    });
+      });
 
-    recompute();
+      document.querySelectorAll("button").forEach(function (btn) {
+        if (/save ct marks/i.test(btn.textContent || "")) {
+          btn.addEventListener("click", function () {
+            recompute();
+            var rows = Array.from(getRows());
+            Promise.all(rows.map(function (row) {
+              var code = row.getAttribute("data-course-code") || row.children[0].textContent.trim();
+              var semesterLabel = row.getAttribute("data-semester-label") || "Level-1 Term-1";
+              var ct = Array.from(row.querySelectorAll("input[type='number']")).map(function (input) {
+                return Number(input.value) || 0;
+              });
+
+              return apiRequest("/portal/student/ct-marks", {
+                method: "PUT",
+                body: {
+                  semesterLabel: semesterLabel,
+                  courseCode: code,
+                  ct: ct
+                }
+              });
+            })).then(function () {
+              showToast("CT marks saved to database.");
+            }).catch(function (error) {
+              showToast(error.message || "CT marks saved locally only.");
+            });
+          });
+        }
+      });
+    }
+
+    Promise.all([getCourseList(), getCtMap()]).then(function (resolved) {
+      var courses = resolved[0] || [];
+      var ctMap = resolved[1] || {};
+      buildCtRows(courses);
+
+      var saved = safeRead(STORAGE_KEYS.ctMarks, {});
+      var legacySaved = Array.isArray(saved) ? {} : saved;
+      Array.from(getRows()).forEach(function (row) {
+        var code = row.getAttribute("data-course-code") || row.children[0].textContent.trim();
+        var semesterLabel = row.getAttribute("data-semester-label") || "Level-1 Term-1";
+        var key = makeCourseKey(semesterLabel, code);
+        var values = ctMap[key] || legacySaved[key] || saved[code] || [];
+        row.querySelectorAll("input[type='number']").forEach(function (input, idx) {
+          if (values[idx] !== undefined) {
+            input.value = String(values[idx]);
+          }
+        });
+      });
+
+      bindCtEvents();
+      recompute();
+    });
   }
 
   function initStudentCoursesPage() {
@@ -510,14 +913,63 @@
     var semesterEl = document.getElementById("semester");
     var totalCreditEl = document.getElementById("totalCredit");
     var targetCgpaEl = document.getElementById("targetCgpa");
+    var courseTypeEl = document.getElementById("courseType");
+
+    ensureSemesterOptions(semesterEl);
+
+    function syncCreditOptionsByType() {
+      if (!courseTypeEl) return;
+      var creditEl = document.getElementById("credit");
+      if (!creditEl) return;
+
+      var type = courseTypeEl.value;
+      var allowed = type === "lab"
+        ? [
+            { value: "1.5", text: "1.5" },
+            { value: "0.75", text: "0.75" }
+          ]
+        : [
+            { value: "2", text: "2.0" },
+            { value: "3", text: "3.0" },
+            { value: "4", text: "4.0" }
+          ];
+
+      var currentValue = creditEl.value;
+      creditEl.innerHTML = "";
+      allowed.forEach(function (item) {
+        var option = document.createElement("option");
+        option.value = item.value;
+        option.textContent = item.text;
+        creditEl.appendChild(option);
+      });
+
+      var stillAllowed = allowed.some(function (item) {
+        return item.value === currentValue;
+      });
+      creditEl.value = stillAllowed ? currentValue : allowed[0].value;
+    }
+
+    function getCourseTypeLabel(type) {
+      return String(type || "theory").toLowerCase() === "lab" ? "Lab" : "Theory";
+    }
+
+    function getTeacherLabel(course) {
+      if (!course) return "";
+      if (Array.isArray(course.teacherNames) && course.teacherNames.length) {
+        return course.teacherNames.join(", ");
+      }
+      return course.teacherName || course.teacher || "";
+    }
 
     function renderCourseRow(item) {
       if (!tableBody || !item || !item.course) return;
       var tr = document.createElement("tr");
       tr.innerHTML = "<td>" + (item.course.code || "") + "</td>" +
         "<td>" + (item.course.name || "") + "</td>" +
+        "<td>" + getCourseTypeLabel(item.course.courseType) + "</td>" +
         "<td>" + (item.course.credit || "") + "</td>" +
-        "<td>" + (item.course.teacherName || "") + "</td>" +
+        "<td>" + getCtPolicy(item.course.courseType, item.course.credit).label + "</td>" +
+        "<td>" + getTeacherLabel(item.course) + "</td>" +
         "<td><span class='badge badge-success'>Active</span></td>";
       tableBody.appendChild(tr);
     }
@@ -538,8 +990,10 @@
             course: {
               code: course.code,
               name: course.name,
+              courseType: course.courseType,
               credit: course.credit,
-              teacherName: course.teacher
+              teacherName: course.teacher,
+              teacherNames: course.teacherNames || []
             }
           });
         });
@@ -573,10 +1027,12 @@
       var code = (document.getElementById("courseCode") || {}).value || "";
       var name = (document.getElementById("courseName") || {}).value || "";
       var credit = (document.getElementById("credit") || {}).value || "3.0";
-      var teacher = (document.getElementById("teacher") || {}).value || "";
+      var teacherPrimary = (document.getElementById("teacherPrimary") || {}).value || "";
+      var teacherSecondary = (document.getElementById("teacherSecondary") || {}).value || "";
+      var courseType = (courseTypeEl || {}).value || "theory";
 
-      if (!code.trim() || !name.trim() || !teacher.trim()) {
-        showToast("Please fill course code, name and teacher.");
+      if (!code.trim() || !name.trim() || !teacherPrimary.trim()) {
+        showToast("Please fill course code, name and teacher 1.");
         return;
       }
 
@@ -584,8 +1040,10 @@
         code: code.trim().toUpperCase(),
         name: name.trim(),
         credit: Number(credit) || 0,
-        teacherName: teacher.trim(),
-        semester: (semesterEl || {}).value || "Spring 2026"
+        courseType: courseType,
+        teacherPrimary: teacherPrimary.trim(),
+        teacherSecondary: teacherSecondary.trim(),
+        semester: (semesterEl || {}).value || "Level-1 Term-1"
       };
 
       apiRequest("/portal/student/courses", {
@@ -603,8 +1061,10 @@
         courses.unshift({
           code: requestBody.code,
           name: requestBody.name,
+          courseType: requestBody.courseType,
           credit: String(requestBody.credit),
-          teacher: requestBody.teacherName,
+          teacher: [requestBody.teacherPrimary, requestBody.teacherSecondary].filter(Boolean).join(", "),
+          teacherNames: [requestBody.teacherPrimary, requestBody.teacherSecondary].filter(Boolean),
           date: new Date().toISOString()
         });
         safeWrite(STORAGE_KEYS.courses, courses);
@@ -641,6 +1101,11 @@
 
     loadCourseRows();
     loadSemesterSetup();
+
+    if (courseTypeEl) {
+      courseTypeEl.addEventListener("change", syncCreditOptionsByType);
+    }
+    syncCreditOptionsByType();
   }
 
   function initSemesterCgpaPage() {
@@ -651,6 +1116,9 @@
     var form = document.querySelector("form");
     var historyBody = document.querySelector("table tbody");
     if (!form || !historyBody) return;
+
+    var semesterEl = document.getElementById("semester");
+    ensureSemesterOptions(semesterEl);
 
     function trendView(trend) {
       if (trend === "up") return { text: "Up", cls: "badge-success" };
@@ -913,6 +1381,143 @@
     sortByCurrentCgpa();
   }
 
+  function initCumulativeCgpaPage() {
+    if (!/student-cumulative-cgpa\.html$/i.test(window.location.pathname)) {
+      return;
+    }
+
+    var timelineBody = document.querySelector("table tbody");
+    if (!timelineBody) return;
+
+    function buildTimelineFromEntries(entries) {
+      var sorted = (entries || []).slice().sort(function (a, b) {
+        return new Date(a.updatedAt || 0).getTime() - new Date(b.updatedAt || 0).getTime();
+      });
+
+      var sum = 0;
+      return sorted.map(function (entry, idx) {
+        var semesterCgpa = Number(entry.cgpa || 0);
+        sum += semesterCgpa;
+        return {
+          semesterLabel: entry.semester || entry.semesterLabel || "Semester",
+          semesterCgpa: semesterCgpa,
+          cumulativeCgpa: Number((sum / (idx + 1)).toFixed(2))
+        };
+      });
+    }
+
+    function getDirectionFromTimeline(timeline) {
+      if (!timeline || timeline.length < 2) return "Stable";
+      var last = Number(timeline[timeline.length - 1].semesterCgpa || 0);
+      var prev = Number(timeline[timeline.length - 2].semesterCgpa || 0);
+      if (last > prev) return "Positive";
+      if (last < prev) return "Negative";
+      return "Stable";
+    }
+
+    function standingFromCgpa(cgpa) {
+      if (cgpa >= 3.5) return { text: "Good Standing", cls: "badge-success" };
+      if (cgpa >= 3.0) return { text: "On Track", cls: "badge-warning" };
+      return { text: "Needs Attention", cls: "badge-danger" };
+    }
+
+    function directionBadge(direction) {
+      if (direction === "Positive") return "badge-success";
+      if (direction === "Negative") return "badge-danger";
+      return "badge-warning";
+    }
+
+    function render(data) {
+      var timeline = data.timeline || [];
+      var cumulativeCgpa = Number(data.cumulativeCgpa || 0);
+      var direction = getDirectionFromTimeline(timeline);
+      var standing = standingFromCgpa(cumulativeCgpa);
+      var ranking = data.ranking || null;
+
+      var cards = document.querySelectorAll("section.grid.grid-3 .card");
+      if (cards[0]) {
+        var totalStrong = cards[0].querySelector(".stats strong");
+        var totalBadge = cards[0].querySelector(".stats .badge");
+        if (totalStrong) totalStrong.textContent = cumulativeCgpa.toFixed(2);
+        if (totalBadge) {
+          totalBadge.className = "badge " + standing.cls;
+          totalBadge.textContent = standing.text;
+        }
+      }
+
+      if (cards[2]) {
+        var dirStrong = cards[2].querySelector(".stats strong");
+        var dirBadge = cards[2].querySelector(".stats .badge");
+        if (dirStrong) dirStrong.textContent = direction;
+        if (dirBadge) {
+          dirBadge.className = "badge " + directionBadge(direction);
+          dirBadge.textContent = direction;
+        }
+      }
+
+      if (cards[1]) {
+        var rankStrong = cards[1].querySelector(".stats strong");
+        var rankMuted = cards[1].querySelector(".stats .muted");
+        if (rankStrong) {
+          var rankValue = ranking && ranking.rank ? ranking.rank : "-";
+          rankStrong.textContent = rankValue === "-" ? "-" : ("#" + rankValue);
+        }
+        if (rankMuted && ranking && ranking.classSize) {
+          rankMuted.textContent = "in your class (" + ranking.classSize + " students)";
+        }
+      }
+
+      var progressBar = document.querySelector(".progress span");
+      if (progressBar) {
+        var width = Math.max(0, Math.min(100, Math.round(cumulativeCgpa * 25)));
+        progressBar.style.width = width + "%";
+      }
+
+      var insightsList = document.querySelectorAll("section.grid.grid-2 .card ul li");
+      if (insightsList.length >= 3) {
+        var termCount = timeline.length;
+        var lastSemester = termCount ? timeline[termCount - 1].semesterLabel : "N/A";
+        var bestSemester = termCount
+          ? timeline.slice().sort(function (a, b) { return Number(b.semesterCgpa || 0) - Number(a.semesterCgpa || 0); })[0].semesterLabel
+          : "N/A";
+        insightsList[0].textContent = "Completed semesters tracked: " + termCount + ".";
+        insightsList[1].textContent = "Best semester CGPA was in " + bestSemester + ".";
+        insightsList[2].textContent = "Most recent recorded semester: " + lastSemester + ".";
+      }
+
+      timelineBody.innerHTML = "";
+      timeline.slice().reverse().forEach(function (item) {
+        var row = document.createElement("tr");
+        row.innerHTML =
+          "<td>" + item.semesterLabel + "</td>" +
+          "<td>" + Number(item.semesterCgpa || 0).toFixed(2) + "</td>" +
+          "<td>" + Number(item.cumulativeCgpa || 0).toFixed(2) + "</td>";
+        timelineBody.appendChild(row);
+      });
+    }
+
+    Promise.all([
+      apiRequest("/portal/student/cumulative-cgpa", { method: "GET" }),
+      apiRequest("/portal/student/ranking", { method: "GET" }).catch(function () { return { data: null }; })
+    ]).then(function (responses) {
+      var cumulativePayload = responses[0] || {};
+      var rankingPayload = responses[1] || {};
+      var data = cumulativePayload.data || {};
+      var rankData = rankingPayload.data || null;
+
+      render({
+        cumulativeCgpa: Number(data.cumulativeCgpa || 0),
+        timeline: Array.isArray(data.timeline) ? data.timeline : [],
+        ranking: rankData
+      });
+    }).catch(function () {
+      var entries = safeRead(STORAGE_KEYS.semesterCgpa, []);
+      var timeline = buildTimelineFromEntries(entries);
+      var cumulativeCgpa = timeline.length ? timeline[timeline.length - 1].cumulativeCgpa : 0;
+      render({ cumulativeCgpa: cumulativeCgpa, timeline: timeline, ranking: null });
+    });
+  }
+
   function initMessages() {
     var isStudentPage = /student-message-advisor\.html$/i.test(window.location.pathname);
     var isAdvisorPage = /advisor-messages\.html$/i.test(window.location.pathname);
@@ -1133,6 +1738,7 @@
     initAdminNotices();
     initAdvisorAssignment();
     initAdvisorRanking();
+    initCumulativeCgpaPage();
     initMessages();
   });
 })();

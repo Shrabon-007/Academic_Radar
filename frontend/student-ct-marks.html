@@ -41,41 +41,62 @@
 
     <section class="card">
       <h3>CT Marks Input</h3>
+      <p class="muted">Theory rules: 4-credit uses 5 CT (best 4), 3-credit uses 4 CT (best 3). Each CT is out of 20.</p>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th>Course</th>
+              <th>Type</th>
+              <th>Credit</th>
               <th>CT-1</th>
               <th>CT-2</th>
               <th>CT-3</th>
+              <th>CT-4</th>
+              <th>CT-5</th>
+              <th>Best Counted</th>
               <th>Total</th>
               <th>Performance</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
+            <tr data-course-type="theory" data-credit="4">
               <td>CSE-321</td>
+              <td>Theory</td>
+              <td>4.0</td>
               <td><input type="number" value="17"></td>
               <td><input type="number" value="18"></td>
               <td><input type="number" value="16"></td>
-              <td>51</td>
+              <td><input type="number" value="19"></td>
+              <td><input type="number" value="15"></td>
+              <td>5 CT, best 4 (80)</td>
+              <td>70 / 80</td>
               <td><span class="badge badge-success">Strong</span></td>
             </tr>
-            <tr>
+            <tr data-course-type="theory" data-credit="3">
               <td>CSE-331</td>
+              <td>Theory</td>
+              <td>3.0</td>
               <td><input type="number" value="14"></td>
               <td><input type="number" value="13"></td>
               <td><input type="number" value="15"></td>
-              <td>42</td>
+              <td><input type="number" value="12"></td>
+              <td><input type="number" value="0"></td>
+              <td>4 CT, best 3 (60)</td>
+              <td>42 / 60</td>
               <td><span class="badge badge-warning">Average</span></td>
             </tr>
-            <tr>
+            <tr data-course-type="theory" data-credit="3">
               <td>MAT-223</td>
+              <td>Theory</td>
+              <td>3.0</td>
               <td><input type="number" value="10"></td>
               <td><input type="number" value="9"></td>
               <td><input type="number" value="11"></td>
-              <td>30</td>
+              <td><input type="number" value="8"></td>
+              <td><input type="number" value="0"></td>
+              <td>4 CT, best 3 (60)</td>
+              <td>30 / 60</td>
               <td><span class="badge badge-danger">Low</span></td>
             </tr>
           </tbody>

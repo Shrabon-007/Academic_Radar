@@ -49,11 +49,20 @@
               <input id="courseCode" type="text" placeholder="CSE-321">
             </div>
             <div class="form-group">
+              <label for="courseType">Course Type</label>
+              <select id="courseType">
+                <option value="theory" selected>Theory</option>
+                <option value="lab">Lab</option>
+              </select>
+            </div>
+            <div class="form-group">
               <label for="credit">Credit</label>
               <select id="credit">
-                <option>1.5</option>
-                <option selected>3.0</option>
-                <option>4.0</option>
+                <option value="2">2.0</option>
+                <option value="3" selected>3.0</option>
+                <option value="4">4.0</option>
+                <option value="1.5">1.5</option>
+                <option value="0.75">0.75</option>
               </select>
             </div>
           </div>
@@ -63,9 +72,15 @@
             <input id="courseName" type="text" placeholder="Database Systems">
           </div>
 
-          <div class="form-group">
-            <label for="teacher">Course Teacher</label>
-            <input id="teacher" type="text" placeholder="Dr. Rahman">
+          <div class="row">
+            <div class="form-group">
+              <label for="teacherPrimary">Course Teacher 1</label>
+              <input id="teacherPrimary" type="text" placeholder="Dr. Rahman">
+            </div>
+            <div class="form-group">
+              <label for="teacherSecondary">Course Teacher 2 (Optional)</label>
+              <input id="teacherSecondary" type="text" placeholder="Ms. Sultana">
+            </div>
           </div>
 
           <button class="btn btn-primary" type="submit">Add Course</button>
@@ -79,8 +94,14 @@
             <div class="form-group">
               <label for="semester">Semester</label>
               <select id="semester">
-                <option>Spring 2026</option>
-                <option>Fall 2025</option>
+                <option>Level-1 Term-1</option>
+                <option>Level-1 Term-2</option>
+                <option>Level-2 Term-1</option>
+                <option>Level-2 Term-2</option>
+                <option>Level-3 Term-1</option>
+                <option>Level-3 Term-2</option>
+                <option>Level-4 Term-1</option>
+                <option>Level-4 Term-2</option>
               </select>
             </div>
             <div class="form-group">
@@ -107,8 +128,10 @@
             <tr>
               <th>Course Code</th>
               <th>Course Name</th>
+              <th>Type</th>
               <th>Credit</th>
-              <th>Teacher</th>
+              <th>CT Policy</th>
+              <th>Teachers</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -116,22 +139,28 @@
             <tr>
               <td>CSE-321</td>
               <td>Database Systems</td>
+              <td>Theory</td>
               <td>3.0</td>
-              <td>Dr. Rahman</td>
+              <td>4 CT, best 3 (60)</td>
+              <td>Dr. Rahman, Ms. Sultana</td>
               <td><span class="badge badge-success">Active</span></td>
             </tr>
             <tr>
               <td>CSE-331</td>
               <td>Operating Systems</td>
+              <td>Theory</td>
               <td>3.0</td>
-              <td>Ms. Sultana</td>
+              <td>4 CT, best 3 (60)</td>
+              <td>Ms. Sultana, Mr. Karim</td>
               <td><span class="badge badge-success">Active</span></td>
             </tr>
             <tr>
               <td>MAT-223</td>
               <td>Engineering Mathematics</td>
+              <td>Theory</td>
               <td>3.0</td>
-              <td>Mr. Karim</td>
+              <td>4 CT, best 3 (60)</td>
+              <td>Mr. Karim, Ms. Farhana</td>
               <td><span class="badge badge-warning">Needs Attendance Focus</span></td>
             </tr>
           </tbody>
