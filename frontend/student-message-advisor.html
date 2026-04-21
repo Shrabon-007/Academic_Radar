@@ -32,6 +32,7 @@
     <a class="nav-link" href="student-attendance.html">Attendance</a>
     <a class="nav-link" href="student-ct-marks.html">Marks</a>
     <a class="nav-link" href="student-semester-cgpa.html">CGPA</a>
+    <a class="nav-link" href="student-running-semester-cgpa.html">Running Calculator</a>
     <a class="nav-link" href="student-message-advisor.html">Messages</a>
   </nav>
 
@@ -41,7 +42,7 @@
 
     <section class="grid grid-2">
       <article class="card">
-        <h3>New Message</h3>
+        <h3>New Meeting Message</h3>
         <form>
           <div class="form-group">
             <label for="advisor">Advisor</label>
@@ -50,17 +51,41 @@
             </select>
           </div>
 
-          <div class="form-group">
-            <label for="subject">Subject</label>
-            <input id="subject" type="text" placeholder="Meeting request regarding low attendance">
+          <div class="row">
+            <div class="form-group">
+              <label for="meetingDate">Preferred Meeting Date</label>
+              <input id="meetingDate" type="date">
+            </div>
+            <div class="form-group">
+              <label for="meetingSlot">Preferred Time Slot</label>
+              <select id="meetingSlot">
+                <option value="">Select a slot</option>
+                <option>Sunday, 11:00 AM - 12:00 PM</option>
+                <option>Tuesday, 2:00 PM - 3:00 PM</option>
+                <option>Wednesday, 10:30 AM - 11:30 AM</option>
+              </select>
+            </div>
           </div>
 
           <div class="form-group">
-            <label for="message">Message</label>
+            <label for="meetingMode">Meeting Mode</label>
+            <select id="meetingMode">
+              <option value="in-person">In-person</option>
+              <option value="online">Online</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="subject">Subject</label>
+            <input id="subject" type="text" placeholder="Meeting request regarding low attendance" value="Meeting Request">
+          </div>
+
+          <div class="form-group">
+            <label for="message">Agenda / Message</label>
             <textarea id="message" placeholder="Dear Sir/Madam, I want to discuss my current academic performance and improvement plan."></textarea>
           </div>
 
-          <button class="btn btn-primary" type="submit">Send Message</button>
+          <button class="btn btn-primary" type="submit">Send Meeting Request</button>
         </form>
       </article>
 

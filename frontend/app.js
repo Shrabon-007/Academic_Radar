@@ -27,6 +27,7 @@
     "student-attendance.html": "student",
     "student-ct-marks.html": "student",
     "student-semester-cgpa.html": "student",
+    "student-running-semester-cgpa.html": "student",
     "student-cumulative-cgpa.html": "student",
     "student-message-advisor.html": "student"
   };
@@ -269,8 +270,12 @@
     });
   }
 
-  function formatDate() {
-    return new Date().toLocaleDateString("en-GB", {
+  function formatDate(input) {
+    var dateObj = input ? new Date(input) : new Date();
+    if (isNaN(dateObj.getTime())) {
+      dateObj = new Date();
+    }
+    return dateObj.toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "short",
       year: "numeric"
@@ -776,8 +781,8 @@
         });
 
         var total = computeBest(values, policy.bestCount);
-        var policyCell = row.children[7];
-        var totalCell = row.children[8];
+        var policyCell = row.children[8];
+        var totalCell = row.children[9];
         var badge = row.querySelector("td:last-child .badge");
 
         if (policyCell) policyCell.textContent = policy.label;
@@ -1118,6 +1123,7 @@
     if (!form || !historyBody) return;
 
     var semesterEl = document.getElementById("semester");
+    var overallCgpaPreviewEl = document.getElementById("overallCgpaPreview");
     ensureSemesterOptions(semesterEl);
 
     function trendView(trend) {
@@ -1130,10 +1136,21 @@
       historyBody.innerHTML = "";
       items.forEach(function (item) {
         var trend = trendView(item.trend);
+        var semesterLabel = item.semesterLabel || item.semester || "Semester";
         var row = document.createElement("tr");
-        row.innerHTML = "<td>" + item.semesterLabel + "</td><td>" + Number(item.cgpa || 0).toFixed(2) + "</td><td><span class='badge " + trend.cls + "'>" + trend.text + "</span></td>";
+        row.innerHTML = "<td>" + semesterLabel + "</td><td>" + Number(item.cgpa || 0).toFixed(2) + "</td><td><span class='badge " + trend.cls + "'>" + trend.text + "</span></td>";
         historyBody.appendChild(row);
       });
+
+      if (overallCgpaPreviewEl) {
+        var valid = items.filter(function (item) { return Number(item.cgpa || 0) > 0; });
+        if (!valid.length) {
+          overallCgpaPreviewEl.value = "0.00";
+        } else {
+          var total = valid.reduce(function (sum, item) { return sum + Number(item.cgpa || 0); }, 0);
+          overallCgpaPreviewEl.value = (total / valid.length).toFixed(2);
+        }
+      }
     }
 
     function loadHistory() {
@@ -1193,6 +1210,173 @@
     });
 
     loadHistory();
+  }
+
+  function initRunningSemesterCgpaPage() {
+    if (!/student-running-semester-cgpa\.html$/i.test(window.location.pathname)) {
+      return;
+    }
+
+    var form = document.getElementById("running-semester-cgpa-form");
+    var semesterEl = document.getElementById("runningSemester");
+    var resultEl = document.getElementById("runningSemesterCgpa");
+    var totalCreditsEl = document.getElementById("runningTotalCredits");
+    var weightedPointsEl = document.getElementById("runningWeightedPoints");
+    var noteEl = document.getElementById("runningCgpaNote");
+    var rowsBody = document.getElementById("runningCgpaCourseRows");
+    var addRowBtn = document.getElementById("addRunningCgpaCourse");
+    if (!form || !semesterEl || !rowsBody) return;
+
+    ensureSemesterOptions(semesterEl);
+
+    function normalizeCourses(items) {
+      return (items || []).map(function (item) {
+        var course = item.course || item;
+        return {
+          code: String(course.code || "").trim().toUpperCase(),
+          credit: Number(course.credit || 0),
+          semesterLabel: String(item.semesterLabel || course.semesterLabel || item.semester || course.semester || "Level-1 Term-1")
+        };
+      }).filter(function (c) { return c.code; });
+    }
+
+    function getCourseList() {
+      return apiRequest("/portal/student/courses", { method: "GET" }).then(function (payload) {
+        var items = (((payload || {}).data || {}).items) || [];
+        return normalizeCourses(items);
+      }).catch(function () {
+        return normalizeCourses(safeRead(STORAGE_KEYS.courses, []));
+      });
+    }
+
+    function addCourseRow(course) {
+      var next = course || { code: "", credit: 3 };
+      var row = document.createElement("tr");
+      row.innerHTML =
+        "<td><input type='text' class='run-course-code' placeholder='e.g. CSE-321' value='" + escapeHtml(next.code || "") + "'></td>" +
+        "<td><input type='number' class='run-course-credit' min='0' step='0.5' value='" + String(Number(next.credit || 0)) + "'></td>" +
+        "<td><input type='number' class='run-course-gp' min='0' max='4' step='0.01' value='0'></td>";
+      rowsBody.appendChild(row);
+      row.querySelectorAll("input").forEach(function (input) {
+        input.addEventListener("input", recomputeRunningCgpa);
+      });
+    }
+
+    function recomputeRunningCgpa() {
+      var rows = Array.from(rowsBody.querySelectorAll("tr"));
+      var totalCredits = 0;
+      var weighted = 0;
+
+      rows.forEach(function (row) {
+        var creditInput = row.querySelector(".run-course-credit");
+        var gpInput = row.querySelector(".run-course-gp");
+
+        var credit = Number((creditInput || {}).value || 0);
+        var gp = Number((gpInput || {}).value || 0);
+
+        if (credit < 0) credit = 0;
+        if (gp < 0) gp = 0;
+        if (gp > 4) gp = 4;
+
+        if (creditInput) creditInput.value = String(credit);
+        if (gpInput) gpInput.value = String(gp);
+
+        if (credit > 0) {
+          totalCredits += credit;
+          weighted += credit * gp;
+        }
+      });
+
+      var semesterCgpa = totalCredits > 0 ? Number((weighted / totalCredits).toFixed(2)) : 0;
+
+      if (resultEl) resultEl.value = semesterCgpa.toFixed(2);
+      if (totalCreditsEl) totalCreditsEl.textContent = totalCredits.toFixed(2);
+      if (weightedPointsEl) weightedPointsEl.textContent = weighted.toFixed(2);
+
+      return {
+        semesterCgpa: semesterCgpa,
+        totalCredits: totalCredits
+      };
+    }
+
+    function setRowsForSemester(courses, semesterLabel) {
+      var scoped = courses.filter(function (course) {
+        return String(course.semesterLabel || "") === String(semesterLabel || "");
+      });
+
+      rowsBody.innerHTML = "";
+      if (!scoped.length) {
+        addCourseRow({ code: "", credit: 3 });
+        addCourseRow({ code: "", credit: 3 });
+        addCourseRow({ code: "", credit: 3 });
+      } else {
+        scoped.forEach(function (course) {
+          addCourseRow(course);
+        });
+      }
+
+      recomputeRunningCgpa();
+    }
+
+    getCourseList().then(function (courses) {
+      setRowsForSemester(courses, semesterEl.value);
+
+      semesterEl.addEventListener("change", function () {
+        setRowsForSemester(courses, semesterEl.value);
+      });
+
+      if (addRowBtn) {
+        addRowBtn.addEventListener("click", function () {
+          addCourseRow({ code: "", credit: 3 });
+          recomputeRunningCgpa();
+        });
+      }
+
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        var semester = semesterEl.value || "";
+        var computed = recomputeRunningCgpa();
+        var note = (noteEl && noteEl.value) ? noteEl.value : "Auto-calculated from running semester course grade points.";
+
+        if (!semester || computed.totalCredits <= 0) {
+          showToast("Please add at least one course with positive credit.");
+          return;
+        }
+
+        apiRequest("/portal/student/semester-cgpa", {
+          method: "PUT",
+          body: {
+            semester: semester,
+            cgpa: computed.semesterCgpa,
+            note: note
+          }
+        }).then(function () {
+          var entries = safeRead(STORAGE_KEYS.semesterCgpa, []);
+          var existingIndex = entries.findIndex(function (item) { return item.semester === semester; });
+          var next = {
+            semester: semester,
+            cgpa: computed.semesterCgpa,
+            note: note,
+            updatedAt: new Date().toISOString()
+          };
+
+          if (existingIndex >= 0) {
+            entries[existingIndex] = next;
+          } else {
+            entries.unshift(next);
+          }
+
+          safeWrite(STORAGE_KEYS.semesterCgpa, entries);
+          showToast("Semester CGPA calculated and synced.");
+          window.setTimeout(function () {
+            window.location.href = "student-semester-cgpa.html";
+          }, 500);
+        }).catch(function (error) {
+          showToast(error.message || "Failed to sync semester CGPA.");
+        });
+      });
+    });
   }
 
   function initAdminNotices() {
@@ -1433,6 +1617,16 @@
       var direction = getDirectionFromTimeline(timeline);
       var standing = standingFromCgpa(cumulativeCgpa);
       var ranking = data.ranking || null;
+      var latestSemester = timeline.length ? timeline[timeline.length - 1].semesterLabel : "N/A";
+
+      var overallCgpaField = document.getElementById("overallCgpaField");
+      var overallLatestSemesterField = document.getElementById("overallLatestSemesterField");
+      if (overallCgpaField) {
+        overallCgpaField.value = cumulativeCgpa.toFixed(2);
+      }
+      if (overallLatestSemesterField) {
+        overallLatestSemesterField.value = latestSemester;
+      }
 
       var cards = document.querySelectorAll("section.grid.grid-3 .card");
       if (cards[0]) {
@@ -1476,7 +1670,7 @@
       var insightsList = document.querySelectorAll("section.grid.grid-2 .card ul li");
       if (insightsList.length >= 3) {
         var termCount = timeline.length;
-        var lastSemester = termCount ? timeline[termCount - 1].semesterLabel : "N/A";
+        var lastSemester = latestSemester;
         var bestSemester = termCount
           ? timeline.slice().sort(function (a, b) { return Number(b.semesterCgpa || 0) - Number(a.semesterCgpa || 0); })[0].semesterLabel
           : "N/A";
@@ -1543,6 +1737,9 @@
     if (isStudentPage) {
       var studentForm = document.querySelector("form");
       var tableBody = document.querySelector("table tbody");
+      var meetingDateEl = document.getElementById("meetingDate");
+      var meetingSlotEl = document.getElementById("meetingSlot");
+      var meetingModeEl = document.getElementById("meetingMode");
       if (studentForm && tableBody) {
         loadMessagesFromApi(function (items) {
           tableBody.innerHTML = "";
@@ -1550,7 +1747,7 @@
             return msg.from === "student";
           }).forEach(function (msg) {
             var row = document.createElement("tr");
-            row.innerHTML = "<td>" + formatDate() + "</td><td>" + (msg.subject || "") + "</td><td><span class='badge " + statusClass(msg.status) + "'>" + (msg.status || "Pending") + "</span></td>";
+            row.innerHTML = "<td>" + formatDate(msg.date) + "</td><td>" + (msg.subject || "") + "</td><td><span class='badge " + statusClass(msg.status) + "'>" + (msg.status || "Pending") + "</span></td>";
             tableBody.appendChild(row);
           });
         });
@@ -1558,21 +1755,42 @@
         studentForm.addEventListener("submit", function (event) {
           event.preventDefault();
           var advisor = (document.getElementById("advisor") || {}).value || "Advisor";
-          var subject = (document.getElementById("subject") || {}).value || "General";
+          var subject = (document.getElementById("subject") || {}).value || "Meeting Request";
           var message = (document.getElementById("message") || {}).value || "";
+          var meetingDate = (meetingDateEl || {}).value || "";
+          var meetingSlot = (meetingSlotEl || {}).value || "";
+          var meetingMode = (meetingModeEl || {}).value || "in-person";
 
           if (!subject.trim() || !message.trim()) {
             showToast("Please fill subject and message.");
             return;
           }
 
+          var formattedDate = meetingDate ? formatDate(meetingDate) : "Not specified";
+          var slotText = meetingSlot || "Not specified";
+          var modeText = meetingMode === "online" ? "Online" : "In-person";
+          var finalSubject = subject.trim();
+          if (!/meeting/i.test(finalSubject)) {
+            finalSubject = "Meeting Request: " + finalSubject;
+          }
+
+          var meetingDetails = [
+            "Meeting details:",
+            "Preferred date: " + formattedDate,
+            "Preferred slot: " + slotText,
+            "Meeting mode: " + modeText,
+            "",
+            "Agenda:",
+            message.trim()
+          ].join("\n");
+
           apiRequest("/portal/messages", {
             method: "POST",
             body: {
               toRole: "advisor",
               advisorName: advisor,
-              subject: subject.trim(),
-              content: message.trim(),
+              subject: finalSubject,
+              content: meetingDetails,
               channel: "portal"
             }
           }).then(function () {
@@ -1581,8 +1799,8 @@
               date: new Date().toISOString(),
               from: "student",
               to: "advisor",
-              subject: subject.trim(),
-              message: message.trim(),
+              subject: finalSubject,
+              message: meetingDetails,
               status: "pending"
             });
             safeWrite(STORAGE_KEYS.messages, messages);
@@ -1593,11 +1811,11 @@
                 return msg.from === "student";
               }).forEach(function (msg) {
                 var row = document.createElement("tr");
-                row.innerHTML = "<td>" + formatDate() + "</td><td>" + (msg.subject || "") + "</td><td><span class='badge " + statusClass(msg.status) + "'>" + (msg.status || "Pending") + "</span></td>";
+                row.innerHTML = "<td>" + formatDate(msg.date) + "</td><td>" + (msg.subject || "") + "</td><td><span class='badge " + statusClass(msg.status) + "'>" + (msg.status || "Pending") + "</span></td>";
                 tableBody.appendChild(row);
               });
             });
-            showToast("Message sent to advisor.");
+            showToast("Meeting request sent to advisor.");
           }).catch(function (error) {
             showToast(error.message || "Failed to send message.");
           });
@@ -1735,6 +1953,7 @@
     initCtMarksPage();
     initStudentCoursesPage();
     initSemesterCgpaPage();
+    initRunningSemesterCgpaPage();
     initAdminNotices();
     initAdvisorAssignment();
     initAdvisorRanking();

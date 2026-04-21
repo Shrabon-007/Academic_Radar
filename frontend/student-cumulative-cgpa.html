@@ -31,13 +31,30 @@
     <a class="nav-link" href="student-courses.html">Courses</a>
     <a class="nav-link" href="student-attendance.html">Attendance</a>
     <a class="nav-link" href="student-ct-marks.html">Marks</a>
-    <a class="nav-link" href="student-semester-cgpa.html">CGPA</a>
+    <a class="nav-link" href="student-semester-cgpa.html">Semester CGPA</a>
+    <a class="nav-link" href="student-running-semester-cgpa.html">Running Calculator</a>
+    <a class="nav-link" href="student-cumulative-cgpa.html">Overall CGPA</a>
     <a class="nav-link" href="student-message-advisor.html">Messages</a>
   </nav>
 
   <main class="page">
     <h1 class="section-title">Overall CGPA, Trend, and Ranking</h1>
     <p class="section-subtitle">View your complete academic summary and growth over all semesters.</p>
+
+    <section class="card">
+      <h3>Overall CGPA Snapshot</h3>
+      <div class="row">
+        <div class="form-group">
+          <label>Overall CGPA</label>
+          <input id="overallCgpaField" type="text" value="0.00" readonly>
+        </div>
+        <div class="form-group">
+          <label>Latest Recorded Semester</label>
+          <input id="overallLatestSemesterField" type="text" value="N/A" readonly>
+        </div>
+      </div>
+      <p class="muted">This segment updates automatically from your semester CGPA history.</p>
+    </section>
 
     <section class="grid grid-3">
       <article class="card">
