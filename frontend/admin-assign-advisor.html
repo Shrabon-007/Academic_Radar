@@ -54,9 +54,7 @@
           <div class="form-group">
             <label for="teacher">Teacher / Advisor</label>
             <select id="teacher">
-              <option>Mr. Ibrahim</option>
-              <option>Dr. Rahman</option>
-              <option>Ms. Sultana</option>
+              <option value="">Loading advisors...</option>
             </select>
           </div>
         </div>
@@ -86,9 +84,7 @@
               <tr><th>Teacher Name</th><th>Department</th><th>Current Advisees</th></tr>
             </thead>
             <tbody id="advisorListTableBody">
-              <tr><td>Mr. Ibrahim</td><td>CSE</td><td>10</td></tr>
-              <tr><td>Dr. Rahman</td><td>CSE</td><td>8</td></tr>
-              <tr><td>Ms. Sultana</td><td>EEE</td><td>9</td></tr>
+              <tr><td colspan="3" class="muted">Loading advisors...</td></tr>
             </tbody>
           </table>
         </div>
@@ -115,9 +111,7 @@
               <tr><th>Serial</th><th>Student ID</th><th>Name</th><th>Assigned Advisor</th></tr>
             </thead>
             <tbody id="studentBatchTableBody">
-              <tr><td>1</td><td>221-15-1201</td><td>Farhan Islam</td><td>Mr. Ibrahim</td></tr>
-              <tr><td>2</td><td>221-15-1203</td><td>Nusrat Jahan</td><td>Mr. Ibrahim</td></tr>
-              <tr><td>10</td><td>221-15-1240</td><td>Mehedi Hasan</td><td>Mr. Ibrahim</td></tr>
+              <tr><td colspan="4" class="muted">Loading students...</td></tr>
             </tbody>
           </table>
         </div>
@@ -132,8 +126,7 @@
             <tr><th>Date</th><th>Teacher</th><th>Batch</th><th>Student Range</th><th>Status</th></tr>
           </thead>
           <tbody id="assignmentHistoryBody">
-            <tr><td>31 Mar 2026</td><td>Mr. Ibrahim</td><td>61</td><td>1-10</td><td><span class="badge badge-success">Assigned</span></td></tr>
-            <tr><td>29 Mar 2026</td><td>Dr. Rahman</td><td>60</td><td>11-20</td><td><span class="badge badge-success">Assigned</span></td></tr>
+            <tr><td colspan="5" class="muted">Loading assignment history...</td></tr>
           </tbody>
         </table>
       </div>

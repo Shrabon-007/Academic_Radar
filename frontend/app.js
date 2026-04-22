@@ -17,12 +17,14 @@
     "admin-dashboard.html": "admin",
     "admin-assign-advisor.html": "admin",
     "admin-notices.html": "admin",
+    "admin-settings.html": "admin",
     "advisor-dashboard.html": "advisor",
     "advisor-student-ranking.html": "advisor",
     "advisor-student-profile.html": "advisor",
     "advisor-danger-zone.html": "advisor",
     "advisor-messages.html": "advisor",
     "advisor-notices.html": "advisor",
+    "advisor-settings.html": "advisor",
     "student-dashboard.html": "student",
     "student-courses.html": "student",
     "student-attendance.html": "student",
@@ -31,7 +33,8 @@
     "student-running-semester-cgpa.html": "student",
     "student-cumulative-cgpa.html": "student",
     "student-notices.html": "student",
-    "student-message-advisor.html": "student"
+    "student-message-advisor.html": "student",
+    "student-settings.html": "student"
   };
 
   var SEMESTER_LABELS = [
@@ -2594,6 +2597,105 @@
     });
   }
 
+  function initAccountSettingsPage() {
+    var isStudentSettings = /student-settings\.html$/i.test(window.location.pathname);
+    var isAdvisorSettings = /advisor-settings\.html$/i.test(window.location.pathname);
+    var isAdminSettings = /admin-settings\.html$/i.test(window.location.pathname);
+    if (!isStudentSettings && !isAdvisorSettings && !isAdminSettings) return;
+
+    var form = document.getElementById("accountSettingsForm");
+    if (!form) return;
+
+    var nameEl = document.getElementById("settingsName");
+    var emailEl = document.getElementById("settingsEmail");
+    var currentPasswordEl = document.getElementById("settingsCurrentPassword");
+    var newPasswordEl = document.getElementById("settingsNewPassword");
+    var confirmPasswordEl = document.getElementById("settingsConfirmPassword");
+
+    var studentIdEl = document.getElementById("settingsStudentId");
+    var batchEl = document.getElementById("settingsBatch");
+    var studentDepartmentEl = document.getElementById("settingsStudentDepartment");
+
+    var advisorIdEl = document.getElementById("settingsAdvisorId");
+    var advisorDepartmentEl = document.getElementById("settingsAdvisorDepartment");
+    var batchFocusEl = document.getElementById("settingsBatchFocus");
+
+    var adminAccountIdEl = document.getElementById("settingsAdminAccountId");
+
+    function fillFromProfile(data) {
+      var user = (data || {}).user || {};
+      var profile = (data || {}).profile || {};
+
+      if (nameEl) nameEl.value = user.name || "";
+      if (emailEl) emailEl.value = user.email || "";
+
+      if (studentIdEl) studentIdEl.value = profile.studentId || "";
+      if (batchEl) batchEl.value = profile.batch || "";
+      if (studentDepartmentEl) studentDepartmentEl.value = profile.department || "";
+
+      if (advisorIdEl) advisorIdEl.value = profile.advisorId || "";
+      if (advisorDepartmentEl) advisorDepartmentEl.value = profile.department || "";
+      if (batchFocusEl) batchFocusEl.value = profile.batchFocus || "";
+
+      if (adminAccountIdEl) adminAccountIdEl.value = profile._id || user.id || "";
+    }
+
+    apiRequest("/auth/me", { method: "GET" }).then(function (payload) {
+      fillFromProfile((payload || {}).data || {});
+    }).catch(function (error) {
+      showToast(error.message || "Could not load account settings.");
+    });
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      var body = {
+        name: (nameEl || {}).value || "",
+        email: (emailEl || {}).value || "",
+        currentPassword: (currentPasswordEl || {}).value || "",
+        newPassword: (newPasswordEl || {}).value || "",
+        confirmPassword: (confirmPasswordEl || {}).value || ""
+      };
+
+      if (isStudentSettings) {
+        body.studentId = (studentIdEl || {}).value || "";
+        body.batch = (batchEl || {}).value || "";
+        body.department = (studentDepartmentEl || {}).value || "";
+      }
+
+      if (isAdvisorSettings) {
+        body.advisorId = (advisorIdEl || {}).value || "";
+        body.department = (advisorDepartmentEl || {}).value || "";
+        body.batchFocus = (batchFocusEl || {}).value || "";
+      }
+
+      apiRequest("/auth/me", { method: "PUT", body: body }).then(function (payload) {
+        var data = (payload || {}).data || {};
+        var user = data.user || {};
+        var prev = getSession() || {};
+        var newSession = {
+          token: data.token || prev.token,
+          userId: user.id || prev.userId || "",
+          role: user.role || prev.role || "",
+          name: user.name || prev.name || "",
+          email: user.email || prev.email || "",
+          profile: data.profile || prev.profile || {},
+          loginAt: prev.loginAt || new Date().toISOString()
+        };
+        safeWrite(STORAGE_KEYS.session, newSession);
+        hydrateUserUi(newSession);
+
+        if (currentPasswordEl) currentPasswordEl.value = "";
+        if (newPasswordEl) newPasswordEl.value = "";
+        if (confirmPasswordEl) confirmPasswordEl.value = "";
+
+        showToast((payload || {}).message || "Account updated successfully.");
+      }).catch(function (error) {
+        showToast(error.message || "Could not update account settings.");
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     ensureProtectedPageAccess();
     setActiveNav();
@@ -2611,5 +2713,6 @@
     initRoleNoticePages();
     initCumulativeCgpaPage();
     initMessages();
+    initAccountSettingsPage();
   });
 })();

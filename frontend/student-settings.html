@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Settings | Academic Radar</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="student-dashboard.html">
+        Academic Radar <br><span class="brand-subtitle">Student Portal</span>
+      </a>
+      <div class="user-info">
+        <div class="avatar avatar-sm">u</div>
+        <div class="user-info-text">
+          <span>Student Name <span class="role-badge badge-student">Student</span></span>
+        </div>
+        <a href="student-login.html" class="logout-link">Log out</a>
+      </div>
+    </div>
+  </header>
+
+  <nav class="nav-links">
+    <a class="nav-link" href="student-dashboard.html">Dashboard</a>
+    <a class="nav-link" href="student-courses.html">Courses</a>
+    <a class="nav-link" href="student-attendance.html">Attendance</a>
+    <a class="nav-link" href="student-ct-marks.html">Marks</a>
+    <a class="nav-link" href="student-semester-cgpa.html">CGPA</a>
+    <a class="nav-link" href="student-notices.html">Notices</a>
+    <a class="nav-link" href="student-message-advisor.html">Messages</a>
+    <a class="nav-link" href="student-settings.html">Settings</a>
+  </nav>
+
+  <main class="page">
+    <h1 class="section-title">Account Settings</h1>
+    <p class="section-subtitle">Update your profile information and password.</p>
+
+    <section class="card">
+      <form id="accountSettingsForm">
+        <div class="row">
+          <div class="form-group">
+            <label for="settingsName">Full Name</label>
+            <input id="settingsName" type="text" required>
+          </div>
+          <div class="form-group">
+            <label for="settingsEmail">Email (Gmail)</label>
+            <input id="settingsEmail" type="email" required>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="form-group">
+            <label for="settingsStudentId">Student ID</label>
+            <input id="settingsStudentId" type="text" required>
+          </div>
+          <div class="form-group">
+            <label for="settingsBatch">Batch</label>
+            <input id="settingsBatch" type="text" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="settingsStudentDepartment">Department</label>
+          <input id="settingsStudentDepartment" type="text" required>
+        </div>
+
+        <hr>
+
+        <div class="row">
+          <div class="form-group">
+            <label for="settingsCurrentPassword">Current Password</label>
+            <input id="settingsCurrentPassword" type="password" autocomplete="current-password">
+          </div>
+          <div class="form-group">
+            <label for="settingsNewPassword">New Password</label>
+            <input id="settingsNewPassword" type="password" autocomplete="new-password">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="settingsConfirmPassword">Confirm New Password</label>
+          <input id="settingsConfirmPassword" type="password" autocomplete="new-password">
+        </div>
+
+        <button class="btn btn-primary" type="submit">Save Changes</button>
+      </form>
+    </section>
+  </main>
+
+  <script src='app.js'></script>
+</body>
+</html>

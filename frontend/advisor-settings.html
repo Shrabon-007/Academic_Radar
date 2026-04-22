@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advisor Settings | Academic Radar</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="advisor-dashboard.html">
+        Academic Radar <br><span class="brand-subtitle">Advisor Portal</span>
+      </a>
+      <div class="user-info">
+        <div class="avatar avatar-sm">u</div>
+        <div class="user-info-text">
+          <span>Advisor Name <span class="role-badge badge-advisor">Advisor</span></span>
+        </div>
+        <a href="advisor-login.html" class="logout-link">Log out</a>
+      </div>
+    </div>
+  </header>
+
+  <nav class="nav-links">
+    <a class="nav-link" href="advisor-dashboard.html">Overview</a>
+    <a class="nav-link" href="advisor-student-ranking.html">Student Ranking</a>
+    <a class="nav-link" href="advisor-danger-zone.html">Performance Watchlist</a>
+    <a class="nav-link" href="advisor-notices.html">Notices</a>
+    <a class="nav-link" href="advisor-messages.html">Messages</a>
+    <a class="nav-link" href="advisor-settings.html">Settings</a>
+  </nav>
+
+  <main class="page">
+    <h1 class="section-title">Account Settings</h1>
+    <p class="section-subtitle">Update your advisor profile and password.</p>
+
+    <section class="card">
+      <form id="accountSettingsForm">
+        <div class="row">
+          <div class="form-group">
+            <label for="settingsName">Full Name</label>
+            <input id="settingsName" type="text" required>
+          </div>
+          <div class="form-group">
+            <label for="settingsEmail">Email (Gmail)</label>
+            <input id="settingsEmail" type="email" required>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="form-group">
+            <label for="settingsAdvisorId">Advisor ID</label>
+            <input id="settingsAdvisorId" type="text" required>
+          </div>
+          <div class="form-group">
+            <label for="settingsBatchFocus">Batch Focus</label>
+            <input id="settingsBatchFocus" type="text">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="settingsAdvisorDepartment">Department</label>
+          <input id="settingsAdvisorDepartment" type="text" required>
+        </div>
+
+        <hr>
+
+        <div class="row">
+          <div class="form-group">
+            <label for="settingsCurrentPassword">Current Password</label>
+            <input id="settingsCurrentPassword" type="password" autocomplete="current-password">
+          </div>
+          <div class="form-group">
+            <label for="settingsNewPassword">New Password</label>
+            <input id="settingsNewPassword" type="password" autocomplete="new-password">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="settingsConfirmPassword">Confirm New Password</label>
+          <input id="settingsConfirmPassword" type="password" autocomplete="new-password">
+        </div>
+
+        <button class="btn btn-primary" type="submit">Save Changes</button>
+      </form>
+    </section>
+  </main>
+
+  <script src='app.js'></script>
+</body>
+</html>
