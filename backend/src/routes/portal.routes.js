@@ -4,6 +4,8 @@ const { authGuard } = require("../middleware/auth.middleware");
 const {
   getStudentCourses,
   addStudentCourse,
+  updateStudentCourse,
+  clearStudentSemesterData,
   getStudentAttendance,
   saveStudentAttendance,
   getStudentCtMarks,
@@ -34,6 +36,8 @@ router.use(authGuard);
 
 router.get("/student/courses", getStudentCourses);
 router.post("/student/courses", addStudentCourse);
+router.put("/student/courses/:courseId", updateStudentCourse);
+router.delete("/student/semester-data", clearStudentSemesterData);
 
 router.get("/student/attendance", getStudentAttendance);
 router.put("/student/attendance", saveStudentAttendance);

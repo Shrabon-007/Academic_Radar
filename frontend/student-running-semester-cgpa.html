@@ -92,7 +92,8 @@
         <h3>Computation Summary</h3>
         <div class="stats"><strong id="runningTotalCredits">0.00</strong><span class="muted">Total Credits Counted</span></div>
         <div class="stats mt-12"><strong id="runningWeightedPoints">0.00</strong><span class="muted">Sum(Credit x Grade Point)</span></div>
-        <div class="alert mt-12">Formula: Semester CGPA = Sum(Credit x Grade Point) / Sum(Credit)</div>
+        <div class="alert mt-12">Formula: Semester CGPA = Sum(Credit x Grade Point) / Sum(Credit), where only courses with grade point >= 2.00 are counted.</div>
+        <p class="muted mt-12" id="runningFailedCourseSummary">Failed courses (GP &lt; 2.00) are excluded from CGPA.</p>
         <p class="muted mt-12">After save, this semester result is pushed into the existing Semester CGPA page automatically.</p>
         <a class="btn btn-outline mt-12" href="student-semester-cgpa.html">Go To Semester CGPA Page</a>
       </article>

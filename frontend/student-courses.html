@@ -38,7 +38,7 @@
 
   <main class="page">
     <h1 class="section-title">Running Semester Courses</h1>
-    <p class="section-subtitle">Add your current semester courses and credit hours.</p>
+    <p class="section-subtitle">Add your current semester courses and credit hours (maximum 10 courses per semester).</p>
 
     <section class="grid grid-2">
       <article class="card">
@@ -84,7 +84,8 @@
             </div>
           </div>
 
-          <button class="btn btn-primary" type="submit">Add Course</button>
+          <button class="btn btn-primary" id="courseSubmitBtn" type="submit">Add Course</button>
+          <button class="btn btn-outline" id="cancelCourseEditBtn" type="button">Cancel Edit</button>
         </form>
       </article>
 
@@ -117,6 +118,7 @@
           </div>
 
           <button class="btn btn-outline" type="submit">Save Semester Setup</button>
+          <button class="btn btn-danger mt-12" id="clearSemesterDataBtn" type="button">Clear Current Semester Data</button>
         </form>
       </article>
     </section>
@@ -134,10 +136,11 @@
               <th>CT Policy</th>
               <th>Teachers</th>
               <th>Status</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td colspan="7" class="muted">Loading current courses...</td></tr>
+            <tr><td colspan="8" class="muted">Loading current courses...</td></tr>
           </tbody>
         </table>
       </div>

@@ -578,6 +578,28 @@
       if (text) {
         text.textContent = average + "% Average Attendance";
       }
+
+      var summaryRows = Array.from(summaryBody.querySelectorAll("tr"));
+      var critical = [];
+      var watch = [];
+      summaryRows.forEach(function (row) {
+        var code = row.getAttribute("data-summary-course") || "Course";
+        var badge = row.querySelector(".risk-badge");
+        var riskLabel = String((badge && badge.textContent) || "").toLowerCase();
+        if (riskLabel === "critical") critical.push(code);
+        else if (riskLabel === "watch" || riskLabel === "low") watch.push(code);
+      });
+
+      var alertEl = document.getElementById("attendanceAlertSummary");
+      if (alertEl) {
+        if (critical.length) {
+          alertEl.textContent = "Critical attendance risk in " + critical.join(", ") + ". Increase class presence immediately to avoid losing attendance marks.";
+        } else if (watch.length) {
+          alertEl.textContent = "Watch list: " + watch.join(", ") + ". Keep attendance above 75% to protect predicted marks.";
+        } else {
+          alertEl.textContent = "Great attendance trend across courses. Continue consistent attendance to keep full attendance marks.";
+        }
+      }
     }
 
     Promise.all([getCourseList(), getAttendanceMap()]).then(function (resolved) {
@@ -837,6 +859,52 @@
         statStrongEls[2].textContent = low.course;
       }
 
+      var statCards = document.querySelectorAll(".grid.grid-3 .card");
+      if (statCards[1]) {
+        var bestBadge = statCards[1].querySelector(".badge");
+        var bestRatio = best && best.max ? best.total / best.max : 0;
+        if (bestBadge) {
+          if (bestRatio >= 0.8) {
+            bestBadge.className = "badge badge-success";
+            bestBadge.textContent = "Strong";
+          } else if (bestRatio >= 0.6) {
+            bestBadge.className = "badge badge-warning";
+            bestBadge.textContent = "Average";
+          } else {
+            bestBadge.className = "badge badge-danger";
+            bestBadge.textContent = "Low";
+          }
+        }
+      }
+
+      if (statCards[2]) {
+        var lowBadge = statCards[2].querySelector(".badge");
+        var lowRatio = low && low.max ? low.total / low.max : 0;
+        if (lowBadge) {
+          if (lowRatio < 0.5) {
+            lowBadge.className = "badge badge-danger";
+            lowBadge.textContent = "Critical";
+          } else if (lowRatio < 0.65) {
+            lowBadge.className = "badge badge-warning";
+            lowBadge.textContent = "Improve";
+          } else {
+            lowBadge.className = "badge badge-success";
+            lowBadge.textContent = "On Track";
+          }
+        }
+      }
+
+      var feedbackEl = document.getElementById("ctFeedbackSummary");
+      if (feedbackEl) {
+        if (average < 50) {
+          feedbackEl.textContent = "CT report: overall CT performance is low (" + average + "%). Focus first on " + (low ? low.course : "weaker courses") + " and target at least 12/20 in upcoming CTs.";
+        } else if (average < 70) {
+          feedbackEl.textContent = "CT report: performance is moderate (" + average + "%). Maintain consistency and improve the weakest course (" + (low ? low.course : "N/A") + ") by 2-3 marks per CT.";
+        } else {
+          feedbackEl.textContent = "CT report: strong performance (" + average + "%). Keep this pace and convert consistency into stronger semester CGPA outcomes.";
+        }
+      }
+
       var ctStore = {};
       Array.from(getRows()).forEach(function (row) {
         var code = row.getAttribute("data-course-code") || row.children[0].textContent.trim();
@@ -924,6 +992,10 @@
     var totalCreditEl = document.getElementById("totalCredit");
     var targetCgpaEl = document.getElementById("targetCgpa");
     var courseTypeEl = document.getElementById("courseType");
+    var courseSubmitBtn = document.getElementById("courseSubmitBtn");
+    var cancelCourseEditBtn = document.getElementById("cancelCourseEditBtn");
+    var clearSemesterDataBtn = document.getElementById("clearSemesterDataBtn");
+    var editingCourseId = "";
 
     ensureSemesterOptions(semesterEl);
 
@@ -971,6 +1043,37 @@
       return course.teacherName || course.teacher || "";
     }
 
+    function resetCourseEditor() {
+      editingCourseId = "";
+      if (courseSubmitBtn) courseSubmitBtn.textContent = "Add Course";
+      if (cancelCourseEditBtn) cancelCourseEditBtn.style.display = "none";
+    }
+
+    function applyCourseToForm(item) {
+      if (!item || !item.course) return;
+      var course = item.course;
+      var courseCodeEl = document.getElementById("courseCode");
+      var courseNameEl = document.getElementById("courseName");
+      var creditEl = document.getElementById("credit");
+      var teacherPrimaryEl = document.getElementById("teacherPrimary");
+      var teacherSecondaryEl = document.getElementById("teacherSecondary");
+
+      editingCourseId = String(item.id || "");
+      if (courseCodeEl) courseCodeEl.value = course.code || "";
+      if (courseNameEl) courseNameEl.value = course.name || "";
+      if (courseTypeEl) {
+        courseTypeEl.value = String(course.courseType || "theory").toLowerCase();
+        syncCreditOptionsByType();
+      }
+      if (creditEl) creditEl.value = String(course.credit || "");
+      if (teacherPrimaryEl) teacherPrimaryEl.value = Array.isArray(course.teacherNames) && course.teacherNames.length ? (course.teacherNames[0] || "") : (course.teacherName || "");
+      if (teacherSecondaryEl) teacherSecondaryEl.value = Array.isArray(course.teacherNames) && course.teacherNames.length > 1 ? (course.teacherNames[1] || "") : "";
+      if (semesterEl && item.semesterLabel) semesterEl.value = item.semesterLabel;
+
+      if (courseSubmitBtn) courseSubmitBtn.textContent = "Update Course";
+      if (cancelCourseEditBtn) cancelCourseEditBtn.style.display = "inline-block";
+    }
+
     function renderCourseRow(item) {
       if (!tableBody || !item || !item.course) return;
       var tr = document.createElement("tr");
@@ -980,7 +1083,15 @@
         "<td>" + (item.course.credit || "") + "</td>" +
         "<td>" + getCtPolicy(item.course.courseType, item.course.credit).label + "</td>" +
         "<td>" + getTeacherLabel(item.course) + "</td>" +
-        "<td><span class='badge badge-success'>Active</span></td>";
+        "<td><span class='badge badge-success'>Active</span></td>" +
+        "<td><button type='button' class='btn btn-outline btn-sm course-edit-btn'>Edit</button></td>";
+      var editBtn = tr.querySelector(".course-edit-btn");
+      if (editBtn) {
+        editBtn.addEventListener("click", function () {
+          applyCourseToForm(item);
+          showToast("Course loaded into form. Update and submit.");
+        });
+      }
       tableBody.appendChild(tr);
     }
 
@@ -990,13 +1101,24 @@
       apiRequest("/portal/student/courses", { method: "GET" }).then(function (payload) {
         var items = (((payload || {}).data || {}).items) || [];
         tableBody.innerHTML = "";
+        if (!items.length) {
+          tableBody.innerHTML = "<tr><td colspan='8' class='muted'>No current courses found.</td></tr>";
+          return;
+        }
         items.forEach(function (item) {
           renderCourseRow(item);
         });
       }).catch(function () {
         var courses = safeRead(STORAGE_KEYS.courses, []);
+        tableBody.innerHTML = "";
+        if (!courses.length) {
+          tableBody.innerHTML = "<tr><td colspan='8' class='muted'>No current courses found.</td></tr>";
+          return;
+        }
         courses.forEach(function (course) {
           renderCourseRow({
+            id: "",
+            semesterLabel: course.semesterLabel || (semesterEl ? semesterEl.value : "Level-1 Term-1"),
             course: {
               code: course.code,
               name: course.name,
@@ -1056,8 +1178,13 @@
         semester: (semesterEl || {}).value || "Level-1 Term-1"
       };
 
-      apiRequest("/portal/student/courses", {
-        method: "POST",
+      var path = editingCourseId ? ("/portal/student/courses/" + editingCourseId) : "/portal/student/courses";
+      var method = editingCourseId ? "PUT" : "POST";
+
+      var wasEditing = !!editingCourseId;
+
+      apiRequest(path, {
+        method: method,
         body: requestBody
       }).then(function (payload) {
         if (tableBody) {
@@ -1065,23 +1192,42 @@
         }
         loadCourseRows();
         addCourseForm.reset();
-        showToast("Course added to database.");
+        resetCourseEditor();
+        showToast(wasEditing ? "Course updated in database." : "Course added to database.");
 
         var courses = safeRead(STORAGE_KEYS.courses, []);
-        courses.unshift({
+        var localNext = {
           code: requestBody.code,
           name: requestBody.name,
           courseType: requestBody.courseType,
           credit: String(requestBody.credit),
           teacher: [requestBody.teacherPrimary, requestBody.teacherSecondary].filter(Boolean).join(", "),
           teacherNames: [requestBody.teacherPrimary, requestBody.teacherSecondary].filter(Boolean),
+          semesterLabel: requestBody.semester,
           date: new Date().toISOString()
-        });
+        };
+        if (wasEditing) {
+          var idx = courses.findIndex(function (row) {
+            return String(row.code || "").toUpperCase() === requestBody.code && String(row.semesterLabel || "") === requestBody.semester;
+          });
+          if (idx >= 0) courses[idx] = localNext;
+          else courses.unshift(localNext);
+        } else {
+          courses.unshift(localNext);
+        }
         safeWrite(STORAGE_KEYS.courses, courses);
       }).catch(function (error) {
         showToast(error.message || "Failed to save course.");
       });
     });
+
+    if (cancelCourseEditBtn) {
+      cancelCourseEditBtn.style.display = "none";
+      cancelCourseEditBtn.addEventListener("click", function () {
+        addCourseForm.reset();
+        resetCourseEditor();
+      });
+    }
 
     setupForm.addEventListener("submit", function (event) {
       event.preventDefault();
@@ -1111,6 +1257,50 @@
 
     loadCourseRows();
     loadSemesterSetup();
+
+    if (clearSemesterDataBtn) {
+      clearSemesterDataBtn.addEventListener("click", function () {
+        var semesterValue = (semesterEl || {}).value || "";
+        if (!semesterValue) {
+          showToast("Please choose a semester first.");
+          return;
+        }
+
+        var yes = window.confirm("Clear all current semester data for " + semesterValue + "? This will remove courses, attendance, CT marks, and semester setup for that semester.");
+        if (!yes) return;
+
+        apiRequest("/portal/student/semester-data", {
+          method: "DELETE",
+          body: { semesterLabel: semesterValue }
+        }).then(function () {
+          var courses = safeRead(STORAGE_KEYS.courses, []).filter(function (item) {
+            return String(item.semesterLabel || "") !== semesterValue;
+          });
+          safeWrite(STORAGE_KEYS.courses, courses);
+
+          var attendanceStore = safeRead(STORAGE_KEYS.attendance, {});
+          Object.keys(attendanceStore || {}).forEach(function (key) {
+            if (String(key).indexOf(semesterValue + "__") === 0) {
+              delete attendanceStore[key];
+            }
+          });
+          safeWrite(STORAGE_KEYS.attendance, attendanceStore);
+
+          var ctStore = safeRead(STORAGE_KEYS.ctMarks, {});
+          Object.keys(ctStore || {}).forEach(function (key) {
+            if (String(key).indexOf(semesterValue + "__") === 0) {
+              delete ctStore[key];
+            }
+          });
+          safeWrite(STORAGE_KEYS.ctMarks, ctStore);
+
+          loadCourseRows();
+          showToast("Current semester data cleared.");
+        }).catch(function (error) {
+          showToast(error.message || "Failed to clear semester data.");
+        });
+      });
+    }
 
     if (courseTypeEl) {
       courseTypeEl.addEventListener("change", syncCreditOptionsByType);
@@ -1227,6 +1417,7 @@
     var resultEl = document.getElementById("runningSemesterCgpa");
     var totalCreditsEl = document.getElementById("runningTotalCredits");
     var weightedPointsEl = document.getElementById("runningWeightedPoints");
+    var failedSummaryEl = document.getElementById("runningFailedCourseSummary");
     var noteEl = document.getElementById("runningCgpaNote");
     var rowsBody = document.getElementById("runningCgpaCourseRows");
     var addRowBtn = document.getElementById("addRunningCgpaCourse");
@@ -1271,6 +1462,7 @@
       var rows = Array.from(rowsBody.querySelectorAll("tr"));
       var totalCredits = 0;
       var weighted = 0;
+      var failedCourses = [];
 
       rows.forEach(function (row) {
         var creditInput = row.querySelector(".run-course-credit");
@@ -1286,7 +1478,14 @@
         if (creditInput) creditInput.value = String(credit);
         if (gpInput) gpInput.value = String(gp);
 
-        if (credit > 0) {
+        var codeInput = row.querySelector(".run-course-code");
+        var code = String((codeInput && codeInput.value) || "").trim().toUpperCase() || "Course";
+
+        if (credit > 0 && gp < 2) {
+          failedCourses.push(code);
+        }
+
+        if (credit > 0 && gp >= 2) {
           totalCredits += credit;
           weighted += credit * gp;
         }
@@ -1297,10 +1496,16 @@
       if (resultEl) resultEl.value = semesterCgpa.toFixed(2);
       if (totalCreditsEl) totalCreditsEl.textContent = totalCredits.toFixed(2);
       if (weightedPointsEl) weightedPointsEl.textContent = weighted.toFixed(2);
+      if (failedSummaryEl) {
+        failedSummaryEl.textContent = failedCourses.length
+          ? ("Failed courses excluded (GP < 2.00): " + failedCourses.join(", ") + ".")
+          : "No failed course detected. All entered courses are counted.";
+      }
 
       return {
         semesterCgpa: semesterCgpa,
-        totalCredits: totalCredits
+        totalCredits: totalCredits,
+        failedCourses: failedCourses
       };
     }
 
@@ -1989,6 +2194,8 @@
     function render(data) {
       var timeline = data.timeline || [];
       var cumulativeCgpa = Number(data.cumulativeCgpa || 0);
+      var shortCourses = Array.isArray(data.shortCourses) ? data.shortCourses : [];
+      var backlogCourses = Array.isArray(data.backlogCourses) ? data.backlogCourses : [];
       var direction = getDirectionFromTimeline(timeline);
       var standing = standingFromCgpa(cumulativeCgpa);
       var ranking = data.ranking || null;
@@ -2049,9 +2256,30 @@
         var bestSemester = termCount
           ? timeline.slice().sort(function (a, b) { return Number(b.semesterCgpa || 0) - Number(a.semesterCgpa || 0); })[0].semesterLabel
           : "N/A";
-        insightsList[0].textContent = "Completed semesters tracked: " + termCount + ".";
+        var rankText = (ranking && ranking.rank && ranking.classSize)
+          ? ("Current class rank: #" + ranking.rank + " out of " + ranking.classSize + ".")
+          : "Current class rank is unavailable.";
+        insightsList[0].textContent = rankText;
         insightsList[1].textContent = "Best semester CGPA was in " + bestSemester + ".";
         insightsList[2].textContent = "Most recent recorded semester: " + lastSemester + ".";
+      }
+
+      var focusTitleEl = document.getElementById("cumulativeFocusTitle");
+      var focusTextEl = document.getElementById("cumulativeFocusText");
+      if (focusTitleEl && focusTextEl) {
+        if (cumulativeCgpa < 3.0) {
+          focusTitleEl.textContent = "CGPA Recovery Plan";
+          focusTextEl.textContent = "needs priority. Improve low-performing courses first and keep CT plus attendance consistency above minimum thresholds.";
+        } else if (direction === "Negative") {
+          focusTitleEl.textContent = "Trend Stabilization";
+          focusTextEl.textContent = "is required. Your recent semester moved down; target steady CT gains and attendance discipline next term.";
+        } else if (direction === "Positive") {
+          focusTitleEl.textContent = "Momentum Building";
+          focusTextEl.textContent = "is recommended. Keep current habits and push one weak course to raise overall CGPA faster.";
+        } else {
+          focusTitleEl.textContent = "Consistency Improvement";
+          focusTextEl.textContent = "can help convert a stable trend into positive growth in the next semester.";
+        }
       }
 
       timelineBody.innerHTML = "";
@@ -2063,6 +2291,35 @@
           "<td>" + Number(item.cumulativeCgpa || 0).toFixed(2) + "</td>";
         timelineBody.appendChild(row);
       });
+
+      var shortCoursesBody = document.getElementById("shortCoursesBody");
+      var backlogCoursesBody = document.getElementById("backlogCoursesBody");
+
+      if (shortCoursesBody) {
+        shortCoursesBody.innerHTML = "";
+        if (!shortCourses.length) {
+          shortCoursesBody.innerHTML = "<tr><td colspan='2' class='muted'>No short courses found.</td></tr>";
+        } else {
+          shortCourses.forEach(function (item) {
+            var row = document.createElement("tr");
+            row.innerHTML = "<td>" + escapeHtml(item.courseCode || item.courseName || "Course") + "</td><td>" + Number(item.scorePercent || 0).toFixed(1) + "%</td>";
+            shortCoursesBody.appendChild(row);
+          });
+        }
+      }
+
+      if (backlogCoursesBody) {
+        backlogCoursesBody.innerHTML = "";
+        if (!backlogCourses.length) {
+          backlogCoursesBody.innerHTML = "<tr><td colspan='2' class='muted'>No backlog courses found.</td></tr>";
+        } else {
+          backlogCourses.forEach(function (item) {
+            var row = document.createElement("tr");
+            row.innerHTML = "<td>" + escapeHtml(item.courseCode || item.courseName || "Course") + "</td><td>" + Number(item.scorePercent || 0).toFixed(1) + "%</td>";
+            backlogCoursesBody.appendChild(row);
+          });
+        }
+      }
     }
 
     Promise.all([
@@ -2077,13 +2334,15 @@
       render({
         cumulativeCgpa: Number(data.cumulativeCgpa || 0),
         timeline: Array.isArray(data.timeline) ? data.timeline : [],
+        shortCourses: Array.isArray(data.shortCourses) ? data.shortCourses : [],
+        backlogCourses: Array.isArray(data.backlogCourses) ? data.backlogCourses : [],
         ranking: rankData
       });
     }).catch(function () {
       var entries = safeRead(STORAGE_KEYS.semesterCgpa, []);
       var timeline = buildTimelineFromEntries(entries);
       var cumulativeCgpa = timeline.length ? timeline[timeline.length - 1].cumulativeCgpa : 0;
-      render({ cumulativeCgpa: cumulativeCgpa, timeline: timeline, ranking: null });
+      render({ cumulativeCgpa: cumulativeCgpa, timeline: timeline, ranking: null, shortCourses: [], backlogCourses: [] });
     });
   }
 

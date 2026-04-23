@@ -235,6 +235,21 @@ const addStudentCourse = async (req, res) => {
       { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
     );
 
+    const existingLink = await StudentCourse.findOne({ studentId: ctx.student._id, courseId: course._id, semesterLabel });
+    if (!existingLink) {
+      const activeCount = await StudentCourse.countDocuments({
+        studentId: ctx.student._id,
+        semesterLabel,
+        status: "active",
+      });
+      if (activeCount >= 10) {
+        return res.status(400).json({
+          success: false,
+          message: "You can add maximum 10 courses in one semester.",
+        });
+      }
+    }
+
     const studentCourse = await StudentCourse.findOneAndUpdate(
       { studentId: ctx.student._id, courseId: course._id, semesterLabel },
       { $set: { status: "active" } },
@@ -261,6 +276,179 @@ const addStudentCourse = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Could not save course.", error: error.message });
+  }
+};
+
+const updateStudentCourse = async (req, res) => {
+  try {
+    const ctx = await withContext(req);
+    if (!ensureRole(res, ctx.user, ["student"])) return;
+    if (!ctx.student) {
+      return res.status(404).json({ success: false, message: "Student profile not found." });
+    }
+
+    const studentCourseId = normalize(req.params.courseId);
+    if (!studentCourseId) {
+      return res.status(400).json({ success: false, message: "courseId is required." });
+    }
+
+    const studentCourse = await StudentCourse.findOne({ _id: studentCourseId, studentId: ctx.student._id }).populate("courseId");
+    if (!studentCourse) {
+      return res.status(404).json({ success: false, message: "Course row not found." });
+    }
+
+    const oldCourse = studentCourse.courseId;
+    const oldSemesterLabel = studentCourse.semesterLabel;
+
+    const code = normalize(req.body.code || (oldCourse && oldCourse.code)).toUpperCase();
+    const name = normalize(req.body.name || (oldCourse && oldCourse.name));
+    const teacherPrimary = normalize(req.body.teacherPrimary || req.body.teacherName || (oldCourse && oldCourse.teacherNames && oldCourse.teacherNames[0]) || (oldCourse && oldCourse.teacherName));
+    const teacherSecondary = normalize(req.body.teacherSecondary || (oldCourse && oldCourse.teacherNames && oldCourse.teacherNames[1]));
+    const teacherNames = [teacherPrimary, teacherSecondary].filter(Boolean);
+    const teacherName = teacherNames.join(", ");
+    const semesterLabel = normalize(req.body.semesterLabel || req.body.semester || oldSemesterLabel);
+    const credit = Number(req.body.credit !== undefined ? req.body.credit : (oldCourse && oldCourse.credit));
+    const courseType = normalizeLower(req.body.courseType || (oldCourse && oldCourse.courseType) || "theory");
+
+    if (!code || !name || !teacherPrimary || !semesterLabel || !credit) {
+      return res.status(400).json({ success: false, message: "code, name, credit, teacher and semester are required." });
+    }
+
+    if (!["theory", "lab"].includes(courseType)) {
+      return res.status(400).json({ success: false, message: "courseType must be theory or lab." });
+    }
+
+    if (courseType === "theory" && !allowedTheoryCredits.includes(credit)) {
+      return res.status(400).json({ success: false, message: "Theory course credit must be 2, 3 or 4." });
+    }
+
+    if (courseType === "lab" && !allowedLabCredits.includes(credit)) {
+      return res.status(400).json({ success: false, message: "Lab course credit must be 1.5 or 0.75." });
+    }
+
+    const targetCourse = await Course.findOneAndUpdate(
+      { code, semesterLabel },
+      {
+        $set: {
+          code,
+          name,
+          credit,
+          courseType,
+          teacherName,
+          teacherNames,
+          department: ctx.student.department || "",
+          semesterLabel,
+        },
+      },
+      { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
+    );
+
+    const isChangingSemester = semesterLabel !== oldSemesterLabel;
+    const isChangingCourse = String(targetCourse._id) !== String(oldCourse ? oldCourse._id : "");
+    if (isChangingSemester || isChangingCourse) {
+      const activeCount = await StudentCourse.countDocuments({
+        studentId: ctx.student._id,
+        semesterLabel,
+        status: "active",
+        _id: { $ne: studentCourse._id },
+      });
+      if (activeCount >= 10) {
+        return res.status(400).json({
+          success: false,
+          message: "You can add maximum 10 courses in one semester.",
+        });
+      }
+    }
+
+    const duplicate = await StudentCourse.findOne({
+      studentId: ctx.student._id,
+      courseId: targetCourse._id,
+      semesterLabel,
+      _id: { $ne: studentCourse._id },
+    });
+    if (duplicate) {
+      return res.status(409).json({ success: false, message: "This course already exists in the selected semester." });
+    }
+
+    studentCourse.courseId = targetCourse._id;
+    studentCourse.semesterLabel = semesterLabel;
+    studentCourse.status = "active";
+    await studentCourse.save();
+
+    await Promise.all([
+      Attendance.updateMany(
+        { studentId: ctx.student._id, courseId: oldCourse ? oldCourse._id : null, semesterLabel: oldSemesterLabel },
+        { $set: { courseId: targetCourse._id, semesterLabel } }
+      ),
+      CtMark.updateMany(
+        { studentId: ctx.student._id, courseId: oldCourse ? oldCourse._id : null, semesterLabel: oldSemesterLabel },
+        { $set: { courseId: targetCourse._id, semesterLabel } }
+      ),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Course updated.",
+      data: {
+        id: studentCourse._id,
+        semesterLabel,
+        status: studentCourse.status,
+        course: {
+          id: targetCourse._id,
+          code: targetCourse.code,
+          name: targetCourse.name,
+          credit: targetCourse.credit,
+          courseType: targetCourse.courseType,
+          teacherName: targetCourse.teacherName,
+          teacherNames: targetCourse.teacherNames || [],
+        },
+      },
+    });
+  } catch (error) {
+    if (error && error.code === 11000) {
+      return res.status(409).json({ success: false, message: "This course already exists in the selected semester." });
+    }
+    return res.status(500).json({ success: false, message: "Could not update course.", error: error.message });
+  }
+};
+
+const clearStudentSemesterData = async (req, res) => {
+  try {
+    const ctx = await withContext(req);
+    if (!ensureRole(res, ctx.user, ["student"])) return;
+    if (!ctx.student) {
+      return res.status(404).json({ success: false, message: "Student profile not found." });
+    }
+
+    const semesterLabel = normalize(req.body.semesterLabel || req.body.semester);
+    if (!semesterLabel) {
+      return res.status(400).json({ success: false, message: "semesterLabel is required." });
+    }
+
+    const [deletedCourses, deletedAttendance, deletedCt, deletedSetup, deletedSemesterCgpa] = await Promise.all([
+      StudentCourse.deleteMany({ studentId: ctx.student._id, semesterLabel }),
+      Attendance.deleteMany({ studentId: ctx.student._id, semesterLabel }),
+      CtMark.deleteMany({ studentId: ctx.student._id, semesterLabel }),
+      SemesterSetup.deleteMany({ studentId: ctx.student._id, semesterLabel }),
+      SemesterCgpa.deleteMany({ studentId: ctx.student._id, semesterLabel }),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Current semester data cleared.",
+      data: {
+        semesterLabel,
+        deleted: {
+          courses: deletedCourses.deletedCount || 0,
+          attendance: deletedAttendance.deletedCount || 0,
+          ctMarks: deletedCt.deletedCount || 0,
+          semesterSetup: deletedSetup.deletedCount || 0,
+          semesterCgpa: deletedSemesterCgpa.deletedCount || 0,
+        },
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not clear semester data.", error: error.message });
   }
 };
 
@@ -630,12 +818,71 @@ const getStudentCumulativeCgpa = async (req, res) => {
 
     const cumulativeCgpa = timeline.length ? timeline[timeline.length - 1].cumulativeCgpa : 0;
 
+    const latestSemesterRow = rows.length ? rows[rows.length - 1] : null;
+    const latestSemesterLabel = latestSemesterRow ? latestSemesterRow.semesterLabel : "";
+
+    let shortCourses = [];
+    let backlogCourses = [];
+
+    if (latestSemesterLabel) {
+      const [semesterCourses, attendanceRows, ctRows] = await Promise.all([
+        StudentCourse.find({ studentId: ctx.student._id, semesterLabel: latestSemesterLabel, status: "active" }).populate("courseId"),
+        Attendance.find({ studentId: ctx.student._id, semesterLabel: latestSemesterLabel }).populate("courseId"),
+        CtMark.find({ studentId: ctx.student._id, semesterLabel: latestSemesterLabel }).populate("courseId"),
+      ]);
+
+      const attendanceByCode = new Map();
+      attendanceRows.forEach((row) => {
+        const code = row.courseId && row.courseId.code ? String(row.courseId.code).toUpperCase() : "";
+        if (code) attendanceByCode.set(code, row);
+      });
+
+      const ctByCode = new Map();
+      ctRows.forEach((row) => {
+        const code = row.courseId && row.courseId.code ? String(row.courseId.code).toUpperCase() : "";
+        if (code) ctByCode.set(code, row);
+      });
+
+      const evaluated = semesterCourses.map((item) => {
+        const course = item.courseId;
+        if (!course) return null;
+
+        const code = String(course.code || "").toUpperCase();
+        const attendance = attendanceByCode.get(code);
+        const ct = ctByCode.get(code);
+
+        const ctPolicy = getCtPolicy(course.courseType, course.credit);
+        const attendanceMax = getAttendanceMaxMark(course.credit, course.courseType);
+        const ctMax = Number(ct && ct.maxMarks !== undefined ? ct.maxMarks : ctPolicy.maxMarks);
+        const totalMax = ctMax + attendanceMax;
+        const earnedCt = Number(ct ? ct.total : 0);
+        const earnedAttendance = Number(attendance ? attendance.predictedMark : 0);
+        const scorePercent = totalMax ? Number((((earnedCt + earnedAttendance) / totalMax) * 100).toFixed(1)) : 0;
+        const attendancePercent = Number(attendance ? attendance.percentage : 0);
+        const ctGiven = !!(ct && [ct.ct1, ct.ct2, ct.ct3, ct.ct4, ct.ct5].some((v) => Number(v || 0) > 0));
+
+        return {
+          courseCode: code,
+          courseName: course.name || "Course",
+          semesterLabel: latestSemesterLabel,
+          scorePercent,
+          attendancePercent,
+          ctGiven,
+        };
+      }).filter(Boolean);
+
+      shortCourses = evaluated.filter((x) => x.scorePercent < 40);
+      backlogCourses = evaluated.filter((x) => x.scorePercent < 40 && x.attendancePercent < 60 && !x.ctGiven);
+    }
+
     return res.status(200).json({
       success: true,
       data: {
         cumulativeCgpa,
         semesterCount: timeline.length,
         timeline,
+        shortCourses,
+        backlogCourses,
       },
     });
   } catch (error) {
@@ -1546,6 +1793,8 @@ const sendMessage = async (req, res) => {
 module.exports = {
   getStudentCourses,
   addStudentCourse,
+  updateStudentCourse,
+  clearStudentSemesterData,
   getStudentAttendance,
   saveStudentAttendance,
   getStudentCtMarks,

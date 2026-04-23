@@ -86,7 +86,7 @@
         <h3>Focus Recommendation</h3>
         <p class="muted">Most impactful area for next semester:</p>
         <div class="progress" class="mb-8"><span ></span></div>
-        <p><strong>Attendance discipline</strong> can give the highest immediate gain in final outcomes.</p>
+        <p><strong id="cumulativeFocusTitle">Focus Area</strong> <span id="cumulativeFocusText">Recommendation will update based on your performance trend.</span></p>
       </article>
     </section>
 
@@ -106,6 +106,44 @@
           </tbody>
         </table>
       </div>
+    </section>
+
+    <section class="grid grid-2" class="mt-18">
+      <article class="card">
+        <h3>Short Courses</h3>
+        <p class="muted">Score below 40% (including CT and attendance).</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Course</th>
+                <th>Score %</th>
+              </tr>
+            </thead>
+            <tbody id="shortCoursesBody">
+              <tr><td colspan="2" class="muted">Loading short courses...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card">
+        <h3>Backlog Courses</h3>
+        <p class="muted">Score below 40%, attendance below 60%, and no CT submitted.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Course</th>
+                <th>Score %</th>
+              </tr>
+            </thead>
+            <tbody id="backlogCoursesBody">
+              <tr><td colspan="2" class="muted">Loading backlog courses...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
     </section>
   </main>
 
