@@ -29,8 +29,10 @@
   <nav class="nav-links">
     <a class="nav-link" href="advisor-dashboard.html">Overview</a>
     <a class="nav-link" href="advisor-student-ranking.html">Student Ranking</a>
-    <a class="nav-link" href="advisor-danger-zone.html">Danger Zone</a>
+    <a class="nav-link" href="advisor-danger-zone.html">Performance Watchlist</a>
+    <a class="nav-link" href="advisor-notices.html">Notices</a>
     <a class="nav-link" href="advisor-messages.html">Messages</a>
+    <a class="nav-link" href="advisor-settings.html">Settings</a>
   </nav>
 
   <main class="page">
@@ -50,23 +52,43 @@
       
       <div class="grid grid-3">
         <a href="advisor-student-ranking.html" class="action-card card-color-1">
-          <div class="icon-placeholder" class="icon-blue">??</div>
+          <div class="icon-placeholder" class="icon-blue">SR</div>
           <h3>Student Ranking</h3>
           <p class="muted">View academic rankings</p>
         </a>
 
         <a href="advisor-danger-zone.html" class="action-card card-color-2">
-          <div class="icon-placeholder" class="icon-green">??</div>
-          <h3>Danger Zone</h3>
+          <div class="icon-placeholder" class="icon-green">PW</div>
+          <h3>Performance Watchlist</h3>
           <p class="muted">Monitor at-risk students</p>
         </a>
 
         <a href="advisor-messages.html" class="action-card card-color-3">
-          <div class="icon-placeholder" class="icon-orange">??</div>
+          <div class="icon-placeholder" class="icon-orange">MS</div>
           <h3>Messages</h3>
           <p class="muted">Communicate with students</p>
         </a>
       </div>
+
+      <section class="card mt-18">
+        <h3>Latest Notices</h3>
+        <p class="muted">Notices sent to advisors and shared notices are shown here.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Title</th>
+                <th>Priority</th>
+                <th>Audience</th>
+              </tr>
+            </thead>
+            <tbody id="advisorNoticeTableBody">
+              <tr><td colspan="4" class="muted">Loading notices...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </section>
   </main>
 

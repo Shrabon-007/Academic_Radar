@@ -269,6 +269,158 @@ const me = async (req, res) => {
   }
 };
 
+const updateMe = async (req, res) => {
+  try {
+    const userId = req.auth.sub;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    const name = String(req.body.name || "").trim();
+    const email = normalizeEmail(req.body.email);
+    const currentPassword = String(req.body.currentPassword || "");
+    const newPassword = String(req.body.newPassword || "");
+    const confirmPassword = String(req.body.confirmPassword || "");
+
+    if (name) {
+      user.name = name;
+    }
+
+    if (email && email !== user.email) {
+      const emailOwner = await User.findOne({ email, _id: { $ne: user._id } });
+      if (emailOwner) {
+        return res.status(409).json({
+          success: false,
+          message: "Another account already uses this email.",
+        });
+      }
+      user.email = email;
+    }
+
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({
+          success: false,
+          message: "Current password is required to set a new password.",
+        });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: "New password must be at least 6 characters.",
+        });
+      }
+
+      if (confirmPassword && confirmPassword !== newPassword) {
+        return res.status(400).json({
+          success: false,
+          message: "New password and confirm password do not match.",
+        });
+      }
+
+      const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!ok) {
+        return res.status(401).json({
+          success: false,
+          message: "Current password is incorrect.",
+        });
+      }
+
+      user.passwordHash = await bcrypt.hash(newPassword, 10);
+    }
+
+    if (user.role === "student") {
+      const student = await Student.findOne({ userId: user._id });
+      if (student) {
+        const studentId = String(req.body.studentId || "").trim();
+        const batch = String(req.body.batch || "").trim();
+        const department = String(req.body.department || "").trim();
+
+        if (studentId && studentId !== student.studentId) {
+          const studentIdOwner = await Student.findOne({ studentId, _id: { $ne: student._id } });
+          if (studentIdOwner) {
+            return res.status(409).json({
+              success: false,
+              message: "Student ID already exists.",
+            });
+          }
+          student.studentId = studentId;
+        }
+
+        if (batch) student.batch = batch;
+        if (department) student.department = department;
+        await student.save();
+      }
+    }
+
+    if (user.role === "advisor") {
+      const advisor = await Advisor.findOne({ userId: user._id });
+      if (advisor) {
+        const advisorId = String(req.body.advisorId || "").trim();
+        const department = String(req.body.department || "").trim();
+        const batchFocus = String(req.body.batchFocus || "").trim();
+
+        if (advisorId && advisorId !== advisor.advisorId) {
+          const advisorIdOwner = await Advisor.findOne({ advisorId, _id: { $ne: advisor._id } });
+          if (advisorIdOwner) {
+            return res.status(409).json({
+              success: false,
+              message: "Advisor ID already exists.",
+            });
+          }
+          advisor.advisorId = advisorId;
+        }
+
+        if (department) advisor.department = department;
+        if (req.body.batchFocus !== undefined) advisor.batchFocus = batchFocus;
+        await advisor.save();
+      }
+    }
+
+    await user.save();
+
+    let profile = null;
+    if (user.role === "student") {
+      profile = await Student.findOne({ userId: user._id }).select("studentId batch department advisorId");
+    }
+    if (user.role === "advisor") {
+      profile = await Advisor.findOne({ userId: user._id }).select("advisorId department batchFocus");
+    }
+    if (user.role === "admin") {
+      profile = await Admin.findOne({ userId: user._id }).select("_id userId createdAt");
+    }
+
+    const token = signToken(user);
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully.",
+      data: {
+        token,
+        user: {
+          id: user._id,
+          role: user.role,
+          name: user.name,
+          email: user.email,
+        },
+        profile,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Could not update profile.",
+      error: error.message,
+    });
+  }
+};
+
 const logout = async (req, res) => {
   return res.status(200).json({
     success: true,
@@ -280,5 +432,6 @@ module.exports = {
   register,
   login,
   me,
+  updateMe,
   logout,
 };

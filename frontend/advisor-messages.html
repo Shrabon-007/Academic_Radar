@@ -29,7 +29,8 @@
   <nav class="nav-links">
     <a class="nav-link" href="advisor-dashboard.html">Overview</a>
     <a class="nav-link" href="advisor-student-ranking.html">Student Ranking</a>
-    <a class="nav-link" href="advisor-danger-zone.html">Danger Zone</a>
+    <a class="nav-link" href="advisor-danger-zone.html">Performance Watchlist</a>
+    <a class="nav-link" href="advisor-notices.html">Notices</a>
     <a class="nav-link" href="advisor-messages.html">Messages</a>
   </nav>
 
@@ -46,18 +47,7 @@
               <tr><th>Date</th><th>Student</th><th>Message</th><th>Status</th></tr>
             </thead>
             <tbody>
-              <tr>
-                <td>30 Mar 2026</td>
-                <td>Mehedi Hasan</td>
-                <td>Sir, I need help with attendance and CT preparation.</td>
-                <td><span class="badge badge-warning">New</span></td>
-              </tr>
-              <tr>
-                <td>29 Mar 2026</td>
-                <td>Nusrat Jahan</td>
-                <td>Can I meet you regarding course planning next semester?</td>
-                <td><span class="badge badge-success">Read</span></td>
-              </tr>
+              <tr><td colspan="4" class="muted">Loading messages...</td></tr>
             </tbody>
           </table>
         </div>
@@ -69,8 +59,7 @@
           <div class="form-group">
             <label for="toStudent">To Student</label>
             <select id="toStudent">
-              <option>Mehedi Hasan (221-15-1240)</option>
-              <option>Nusrat Jahan (221-15-1203)</option>
+              <option value="">Loading assigned students...</option>
             </select>
           </div>
 
@@ -87,6 +76,25 @@
           <button class="btn btn-primary" type="submit">Send SMS</button>
         </form>
       </article>
+    </section>
+
+    <section class="card" class="mt-18">
+      <h3>Admin Notices</h3>
+      <p class="muted">Notices for advisors and shared notices are listed here.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Title</th>
+              <th>Priority</th>
+            </tr>
+          </thead>
+          <tbody id="advisorNoticePanelBody">
+            <tr><td colspan="3" class="muted">Loading notices...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
   </main>
 

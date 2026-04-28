@@ -32,12 +32,16 @@
     <a class="nav-link" href="student-attendance.html">Attendance</a>
     <a class="nav-link" href="student-ct-marks.html">Marks</a>
     <a class="nav-link" href="student-semester-cgpa.html">CGPA</a>
+    <a class="nav-link" href="student-running-semester-cgpa.html">Running Calculator</a>
+    <a class="nav-link" href="student-cumulative-cgpa.html">Overall CGPA</a>
+    <a class="nav-link" href="student-notices.html">Notices</a>
     <a class="nav-link" href="student-message-advisor.html">Messages</a>
+    <a class="nav-link" href="student-settings.html">Settings</a>
   </nav>
 
   <main class="page">
     <h1 class="section-title">Running Semester Courses</h1>
-    <p class="section-subtitle">Add your current semester courses and credit hours.</p>
+    <p class="section-subtitle">Manage current semester courses and credits (maximum 10 courses per semester).</p>
 
     <section class="grid grid-2">
       <article class="card">
@@ -83,12 +87,14 @@
             </div>
           </div>
 
-          <button class="btn btn-primary" type="submit">Add Course</button>
+          <button class="btn btn-primary" id="courseSubmitBtn" type="submit">Add Course</button>
+          <button class="btn btn-outline" id="cancelCourseEditBtn" type="button">Cancel Edit</button>
         </form>
       </article>
 
       <article class="card">
         <h3>Semester Setup</h3>
+        <p class="muted">Update registered credits and your target CGPA for the selected semester.</p>
         <form>
           <div class="row">
             <div class="form-group">
@@ -116,6 +122,7 @@
           </div>
 
           <button class="btn btn-outline" type="submit">Save Semester Setup</button>
+          <button class="btn btn-danger mt-12" id="clearSemesterDataBtn" type="button">Clear Current Semester Data</button>
         </form>
       </article>
     </section>
@@ -133,36 +140,11 @@
               <th>CT Policy</th>
               <th>Teachers</th>
               <th>Status</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>CSE-321</td>
-              <td>Database Systems</td>
-              <td>Theory</td>
-              <td>3.0</td>
-              <td>4 CT, best 3 (60)</td>
-              <td>Dr. Rahman, Ms. Sultana</td>
-              <td><span class="badge badge-success">Active</span></td>
-            </tr>
-            <tr>
-              <td>CSE-331</td>
-              <td>Operating Systems</td>
-              <td>Theory</td>
-              <td>3.0</td>
-              <td>4 CT, best 3 (60)</td>
-              <td>Ms. Sultana, Mr. Karim</td>
-              <td><span class="badge badge-success">Active</span></td>
-            </tr>
-            <tr>
-              <td>MAT-223</td>
-              <td>Engineering Mathematics</td>
-              <td>Theory</td>
-              <td>3.0</td>
-              <td>4 CT, best 3 (60)</td>
-              <td>Mr. Karim, Ms. Farhana</td>
-              <td><span class="badge badge-warning">Needs Attendance Focus</span></td>
-            </tr>
+            <tr><td colspan="8" class="muted">Loading current courses...</td></tr>
           </tbody>
         </table>
       </div>

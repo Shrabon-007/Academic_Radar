@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const User = require("../models/user.model");
 const Student = require("../models/student.model");
 const Advisor = require("../models/advisor.model");
@@ -15,6 +16,25 @@ const Message = require("../models/message.model");
 
 const normalize = (value) => String(value || "").trim();
 const normalizeLower = (value) => normalize(value).toLowerCase();
+
+const escapeRegex = (value) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const normalizeBatchValue = (value) => normalize(value).replace(/^batch\s*/i, "").trim();
+
+const toBatchPattern = (batchValue) => {
+  const normalized = normalizeBatchValue(batchValue);
+  const escaped = escapeRegex(normalized);
+  return new RegExp("^(batch\\s*)?" + escaped + "$", "i");
+};
+
+const toComparableStudentNumber = (student) => {
+  if (!student) return null;
+  if (Number.isFinite(Number(student.serialNo)) && Number(student.serialNo) > 0) {
+    return Number(student.serialNo);
+  }
+  const numeric = String(student.studentId || "").replace(/\D/g, "");
+  return numeric ? Number(numeric) : null;
+};
 
 const toNoticeTarget = (target) => {
   const value = normalizeLower(target);
@@ -215,6 +235,21 @@ const addStudentCourse = async (req, res) => {
       { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
     );
 
+    const existingLink = await StudentCourse.findOne({ studentId: ctx.student._id, courseId: course._id, semesterLabel });
+    if (!existingLink) {
+      const activeCount = await StudentCourse.countDocuments({
+        studentId: ctx.student._id,
+        semesterLabel,
+        status: "active",
+      });
+      if (activeCount >= 10) {
+        return res.status(400).json({
+          success: false,
+          message: "You can add maximum 10 courses in one semester.",
+        });
+      }
+    }
+
     const studentCourse = await StudentCourse.findOneAndUpdate(
       { studentId: ctx.student._id, courseId: course._id, semesterLabel },
       { $set: { status: "active" } },
@@ -241,6 +276,179 @@ const addStudentCourse = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Could not save course.", error: error.message });
+  }
+};
+
+const updateStudentCourse = async (req, res) => {
+  try {
+    const ctx = await withContext(req);
+    if (!ensureRole(res, ctx.user, ["student"])) return;
+    if (!ctx.student) {
+      return res.status(404).json({ success: false, message: "Student profile not found." });
+    }
+
+    const studentCourseId = normalize(req.params.courseId);
+    if (!studentCourseId) {
+      return res.status(400).json({ success: false, message: "courseId is required." });
+    }
+
+    const studentCourse = await StudentCourse.findOne({ _id: studentCourseId, studentId: ctx.student._id }).populate("courseId");
+    if (!studentCourse) {
+      return res.status(404).json({ success: false, message: "Course row not found." });
+    }
+
+    const oldCourse = studentCourse.courseId;
+    const oldSemesterLabel = studentCourse.semesterLabel;
+
+    const code = normalize(req.body.code || (oldCourse && oldCourse.code)).toUpperCase();
+    const name = normalize(req.body.name || (oldCourse && oldCourse.name));
+    const teacherPrimary = normalize(req.body.teacherPrimary || req.body.teacherName || (oldCourse && oldCourse.teacherNames && oldCourse.teacherNames[0]) || (oldCourse && oldCourse.teacherName));
+    const teacherSecondary = normalize(req.body.teacherSecondary || (oldCourse && oldCourse.teacherNames && oldCourse.teacherNames[1]));
+    const teacherNames = [teacherPrimary, teacherSecondary].filter(Boolean);
+    const teacherName = teacherNames.join(", ");
+    const semesterLabel = normalize(req.body.semesterLabel || req.body.semester || oldSemesterLabel);
+    const credit = Number(req.body.credit !== undefined ? req.body.credit : (oldCourse && oldCourse.credit));
+    const courseType = normalizeLower(req.body.courseType || (oldCourse && oldCourse.courseType) || "theory");
+
+    if (!code || !name || !teacherPrimary || !semesterLabel || !credit) {
+      return res.status(400).json({ success: false, message: "code, name, credit, teacher and semester are required." });
+    }
+
+    if (!["theory", "lab"].includes(courseType)) {
+      return res.status(400).json({ success: false, message: "courseType must be theory or lab." });
+    }
+
+    if (courseType === "theory" && !allowedTheoryCredits.includes(credit)) {
+      return res.status(400).json({ success: false, message: "Theory course credit must be 2, 3 or 4." });
+    }
+
+    if (courseType === "lab" && !allowedLabCredits.includes(credit)) {
+      return res.status(400).json({ success: false, message: "Lab course credit must be 1.5 or 0.75." });
+    }
+
+    const targetCourse = await Course.findOneAndUpdate(
+      { code, semesterLabel },
+      {
+        $set: {
+          code,
+          name,
+          credit,
+          courseType,
+          teacherName,
+          teacherNames,
+          department: ctx.student.department || "",
+          semesterLabel,
+        },
+      },
+      { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
+    );
+
+    const isChangingSemester = semesterLabel !== oldSemesterLabel;
+    const isChangingCourse = String(targetCourse._id) !== String(oldCourse ? oldCourse._id : "");
+    if (isChangingSemester || isChangingCourse) {
+      const activeCount = await StudentCourse.countDocuments({
+        studentId: ctx.student._id,
+        semesterLabel,
+        status: "active",
+        _id: { $ne: studentCourse._id },
+      });
+      if (activeCount >= 10) {
+        return res.status(400).json({
+          success: false,
+          message: "You can add maximum 10 courses in one semester.",
+        });
+      }
+    }
+
+    const duplicate = await StudentCourse.findOne({
+      studentId: ctx.student._id,
+      courseId: targetCourse._id,
+      semesterLabel,
+      _id: { $ne: studentCourse._id },
+    });
+    if (duplicate) {
+      return res.status(409).json({ success: false, message: "This course already exists in the selected semester." });
+    }
+
+    studentCourse.courseId = targetCourse._id;
+    studentCourse.semesterLabel = semesterLabel;
+    studentCourse.status = "active";
+    await studentCourse.save();
+
+    await Promise.all([
+      Attendance.updateMany(
+        { studentId: ctx.student._id, courseId: oldCourse ? oldCourse._id : null, semesterLabel: oldSemesterLabel },
+        { $set: { courseId: targetCourse._id, semesterLabel } }
+      ),
+      CtMark.updateMany(
+        { studentId: ctx.student._id, courseId: oldCourse ? oldCourse._id : null, semesterLabel: oldSemesterLabel },
+        { $set: { courseId: targetCourse._id, semesterLabel } }
+      ),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Course updated.",
+      data: {
+        id: studentCourse._id,
+        semesterLabel,
+        status: studentCourse.status,
+        course: {
+          id: targetCourse._id,
+          code: targetCourse.code,
+          name: targetCourse.name,
+          credit: targetCourse.credit,
+          courseType: targetCourse.courseType,
+          teacherName: targetCourse.teacherName,
+          teacherNames: targetCourse.teacherNames || [],
+        },
+      },
+    });
+  } catch (error) {
+    if (error && error.code === 11000) {
+      return res.status(409).json({ success: false, message: "This course already exists in the selected semester." });
+    }
+    return res.status(500).json({ success: false, message: "Could not update course.", error: error.message });
+  }
+};
+
+const clearStudentSemesterData = async (req, res) => {
+  try {
+    const ctx = await withContext(req);
+    if (!ensureRole(res, ctx.user, ["student"])) return;
+    if (!ctx.student) {
+      return res.status(404).json({ success: false, message: "Student profile not found." });
+    }
+
+    const semesterLabel = normalize(req.body.semesterLabel || req.body.semester);
+    if (!semesterLabel) {
+      return res.status(400).json({ success: false, message: "semesterLabel is required." });
+    }
+
+    const [deletedCourses, deletedAttendance, deletedCt, deletedSetup, deletedSemesterCgpa] = await Promise.all([
+      StudentCourse.deleteMany({ studentId: ctx.student._id, semesterLabel }),
+      Attendance.deleteMany({ studentId: ctx.student._id, semesterLabel }),
+      CtMark.deleteMany({ studentId: ctx.student._id, semesterLabel }),
+      SemesterSetup.deleteMany({ studentId: ctx.student._id, semesterLabel }),
+      SemesterCgpa.deleteMany({ studentId: ctx.student._id, semesterLabel }),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Current semester data cleared.",
+      data: {
+        semesterLabel,
+        deleted: {
+          courses: deletedCourses.deletedCount || 0,
+          attendance: deletedAttendance.deletedCount || 0,
+          ctMarks: deletedCt.deletedCount || 0,
+          semesterSetup: deletedSetup.deletedCount || 0,
+          semesterCgpa: deletedSemesterCgpa.deletedCount || 0,
+        },
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not clear semester data.", error: error.message });
   }
 };
 
@@ -610,12 +818,71 @@ const getStudentCumulativeCgpa = async (req, res) => {
 
     const cumulativeCgpa = timeline.length ? timeline[timeline.length - 1].cumulativeCgpa : 0;
 
+    const latestSemesterRow = rows.length ? rows[rows.length - 1] : null;
+    const latestSemesterLabel = latestSemesterRow ? latestSemesterRow.semesterLabel : "";
+
+    let shortCourses = [];
+    let backlogCourses = [];
+
+    if (latestSemesterLabel) {
+      const [semesterCourses, attendanceRows, ctRows] = await Promise.all([
+        StudentCourse.find({ studentId: ctx.student._id, semesterLabel: latestSemesterLabel, status: "active" }).populate("courseId"),
+        Attendance.find({ studentId: ctx.student._id, semesterLabel: latestSemesterLabel }).populate("courseId"),
+        CtMark.find({ studentId: ctx.student._id, semesterLabel: latestSemesterLabel }).populate("courseId"),
+      ]);
+
+      const attendanceByCode = new Map();
+      attendanceRows.forEach((row) => {
+        const code = row.courseId && row.courseId.code ? String(row.courseId.code).toUpperCase() : "";
+        if (code) attendanceByCode.set(code, row);
+      });
+
+      const ctByCode = new Map();
+      ctRows.forEach((row) => {
+        const code = row.courseId && row.courseId.code ? String(row.courseId.code).toUpperCase() : "";
+        if (code) ctByCode.set(code, row);
+      });
+
+      const evaluated = semesterCourses.map((item) => {
+        const course = item.courseId;
+        if (!course) return null;
+
+        const code = String(course.code || "").toUpperCase();
+        const attendance = attendanceByCode.get(code);
+        const ct = ctByCode.get(code);
+
+        const ctPolicy = getCtPolicy(course.courseType, course.credit);
+        const attendanceMax = getAttendanceMaxMark(course.credit, course.courseType);
+        const ctMax = Number(ct && ct.maxMarks !== undefined ? ct.maxMarks : ctPolicy.maxMarks);
+        const totalMax = ctMax + attendanceMax;
+        const earnedCt = Number(ct ? ct.total : 0);
+        const earnedAttendance = Number(attendance ? attendance.predictedMark : 0);
+        const scorePercent = totalMax ? Number((((earnedCt + earnedAttendance) / totalMax) * 100).toFixed(1)) : 0;
+        const attendancePercent = Number(attendance ? attendance.percentage : 0);
+        const ctGiven = !!(ct && [ct.ct1, ct.ct2, ct.ct3, ct.ct4, ct.ct5].some((v) => Number(v || 0) > 0));
+
+        return {
+          courseCode: code,
+          courseName: course.name || "Course",
+          semesterLabel: latestSemesterLabel,
+          scorePercent,
+          attendancePercent,
+          ctGiven,
+        };
+      }).filter(Boolean);
+
+      shortCourses = evaluated.filter((x) => x.scorePercent < 40);
+      backlogCourses = evaluated.filter((x) => x.scorePercent < 40 && x.attendancePercent < 60 && !x.ctGiven);
+    }
+
     return res.status(200).json({
       success: true,
       data: {
         cumulativeCgpa,
         semesterCount: timeline.length,
         timeline,
+        shortCourses,
+        backlogCourses,
       },
     });
   } catch (error) {
@@ -800,6 +1067,235 @@ const getAdvisorAssignments = async (req, res) => {
   }
 };
 
+const getAdminAdvisors = async (req, res) => {
+  try {
+    const ctx = await withContext(req);
+    if (!ensureRole(res, ctx.user, ["admin"])) return;
+
+    const advisors = await Advisor.find({}).populate("userId", "name").sort({ createdAt: -1 });
+    const assignments = await AdvisorAssignment.find({ status: "assigned" }).select("advisorName startSerial endSerial");
+
+    const adviseeCountByAdvisor = {};
+    assignments.forEach((item) => {
+      const name = normalize(item.advisorName);
+      const count = Math.max(0, Number(item.endSerial || 0) - Number(item.startSerial || 0) + 1);
+      adviseeCountByAdvisor[name] = (adviseeCountByAdvisor[name] || 0) + count;
+    });
+
+    const items = advisors.map((advisor) => {
+      const advisorName = advisor.userId && advisor.userId.name ? advisor.userId.name : "Advisor";
+      return {
+        id: advisor._id,
+        advisorId: advisor.advisorId,
+        name: advisorName,
+        department: advisor.department || "",
+        batchFocus: advisor.batchFocus || "",
+        adviseeCount: adviseeCountByAdvisor[advisorName] || 0,
+      };
+    });
+
+    return res.status(200).json({ success: true, data: { items } });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not load advisors.", error: error.message });
+  }
+};
+
+const getStudentAssignedAdvisor = async (req, res) => {
+  try {
+    const ctx = await withContext(req);
+    if (!ensureRole(res, ctx.user, ["student"])) return;
+    if (!ctx.student) {
+      return res.status(404).json({ success: false, message: "Student profile not found." });
+    }
+
+    const comparable = toComparableStudentNumber(ctx.student);
+    if (!Number.isFinite(comparable)) {
+      return res.status(200).json({ success: true, data: { advisor: null } });
+    }
+
+    const assignment = await AdvisorAssignment.findOne({
+      batch: toBatchPattern(ctx.student.batch),
+      status: "assigned",
+      startSerial: { $lte: comparable },
+      endSerial: { $gte: comparable },
+    }).sort({ createdAt: -1 });
+
+    if (!assignment) {
+      return res.status(200).json({ success: true, data: { advisor: null } });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        advisor: {
+          advisorName: assignment.advisorName,
+          batch: assignment.batch,
+          startSerial: assignment.startSerial,
+          endSerial: assignment.endSerial,
+        },
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not resolve assigned advisor.", error: error.message });
+  }
+};
+
+const getAdvisorStudentsByBatch = async (req, res) => {
+  try {
+    const ctx = await withContext(req);
+    if (!ensureRole(res, ctx.user, ["advisor"])) return;
+
+    const batchQuery = normalize(req.query.batch);
+    const assignmentsFilter = {
+      advisorName: ctx.user.name,
+      status: "assigned",
+    };
+
+    if (batchQuery) {
+      assignmentsFilter.batch = toBatchPattern(batchQuery);
+    }
+
+    const assignments = await AdvisorAssignment.find(assignmentsFilter).sort({ createdAt: -1 });
+    const availableBatches = Array.from(new Set(assignments.map((item) => normalizeBatchValue(item.batch)).filter(Boolean)));
+
+    if (!assignments.length) {
+      return res.status(200).json({ success: true, data: { batches: availableBatches, items: [] } });
+    }
+
+    const assignmentByBatch = {};
+    assignments.forEach((assignment) => {
+      var key = normalizeBatchValue(assignment.batch);
+      if (!assignmentByBatch[key]) assignmentByBatch[key] = [];
+      assignmentByBatch[key].push(assignment);
+    });
+
+    const targetBatchKeys = Object.keys(assignmentByBatch);
+    const students = await Student.find({}).populate("userId", "name");
+
+    const matchedStudents = students.filter((student) => {
+      var batchKey = normalizeBatchValue(student.batch);
+      if (targetBatchKeys.indexOf(batchKey) < 0) return false;
+
+      var comparable = toComparableStudentNumber(student);
+      if (!Number.isFinite(comparable)) return false;
+
+      return assignmentByBatch[batchKey].some((assignment) => {
+        return comparable >= Number(assignment.startSerial || 0) && comparable <= Number(assignment.endSerial || 0);
+      });
+    });
+
+    const studentIds = matchedStudents.map((student) => student._id);
+    const cgpaRows = await SemesterCgpa.find({ studentId: { $in: studentIds } }).sort({ updatedAt: -1 });
+
+    const cgpaMap = new Map();
+    cgpaRows.forEach((row) => {
+      const key = String(row.studentId);
+      const current = cgpaMap.get(key) || { latest: null, sum: 0, count: 0 };
+      if (current.latest === null) {
+        current.latest = Number(row.cgpa || 0);
+      }
+      current.sum += Number(row.cgpa || 0);
+      current.count += 1;
+      cgpaMap.set(key, current);
+    });
+
+    const items = matchedStudents.map((student) => {
+      const cgpa = cgpaMap.get(String(student._id)) || { latest: 0, sum: 0, count: 0 };
+      const overall = cgpa.count ? Number((cgpa.sum / cgpa.count).toFixed(2)) : 0;
+
+      return {
+        userId: student.userId ? String(student.userId._id) : "",
+        studentId: student.studentId,
+        name: (student.userId && student.userId.name) ? student.userId.name : "Student",
+        batch: normalizeBatchValue(student.batch),
+        currentCgpa: Number(Number(cgpa.latest || 0).toFixed(2)),
+        overallCgpa: overall,
+      };
+    }).sort((a, b) => {
+      if (a.batch !== b.batch) return String(a.batch).localeCompare(String(b.batch));
+      if (b.currentCgpa !== a.currentCgpa) return b.currentCgpa - a.currentCgpa;
+      return String(a.studentId || "").localeCompare(String(b.studentId || ""));
+    }).map((item, idx) => {
+      return {
+        rank: idx + 1,
+        userId: item.userId,
+        studentId: item.studentId,
+        name: item.name,
+        batch: item.batch,
+        currentCgpa: item.currentCgpa,
+        overallCgpa: item.overallCgpa,
+      };
+    });
+
+    return res.status(200).json({ success: true, data: { batches: availableBatches, items } });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not load advisor students.", error: error.message });
+  }
+};
+
+const getAdminStudentsByBatch = async (req, res) => {
+  try {
+    const ctx = await withContext(req);
+    if (!ensureRole(res, ctx.user, ["admin"])) return;
+
+    const batchRaw = normalize(req.query.batch);
+    if (!batchRaw) {
+      return res.status(400).json({ success: false, message: "batch query is required." });
+    }
+
+    const batchNumber = batchRaw.replace(/^batch\s*/i, "").trim();
+    const escapedBatch = batchNumber.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const batchPattern = new RegExp("^(batch\\s*)?" + escapedBatch + "$", "i");
+
+    const [students, assignments] = await Promise.all([
+      Student.find({ batch: batchPattern }).populate("userId", "name").sort({ studentId: 1 }),
+      AdvisorAssignment.find({ batch: batchPattern, status: "assigned" }).sort({ createdAt: -1 }),
+    ]);
+
+    const toComparableNumber = (student) => {
+      if (Number.isFinite(student.serialNo) && Number(student.serialNo) > 0) {
+        return Number(student.serialNo);
+      }
+      const numeric = String(student.studentId || "").replace(/\D/g, "");
+      return numeric ? Number(numeric) : null;
+    };
+
+    const normalizedStudents = students.map((student) => {
+      const comparable = toComparableNumber(student);
+      const activeAssignment = assignments.find((assignment) => {
+        if (!Number.isFinite(comparable)) return false;
+        return comparable >= Number(assignment.startSerial || 0) && comparable <= Number(assignment.endSerial || 0);
+      });
+
+      return {
+        id: student._id,
+        studentId: student.studentId,
+        name: student.userId && student.userId.name ? student.userId.name : "Student",
+        batch: student.batch,
+        comparable,
+        assignedAdvisor: activeAssignment ? activeAssignment.advisorName : null,
+      };
+    }).sort((a, b) => {
+      const av = Number.isFinite(a.comparable) ? a.comparable : Number.MAX_SAFE_INTEGER;
+      const bv = Number.isFinite(b.comparable) ? b.comparable : Number.MAX_SAFE_INTEGER;
+      if (av !== bv) return av - bv;
+      return String(a.studentId || "").localeCompare(String(b.studentId || ""));
+    });
+
+    const items = normalizedStudents.map((student, idx) => ({
+      serial: idx + 1,
+      studentId: student.studentId,
+      name: student.name,
+      batch: student.batch,
+      assignedAdvisor: student.assignedAdvisor,
+    }));
+
+    return res.status(200).json({ success: true, data: { batch: batchNumber, items } });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not load students by batch.", error: error.message });
+  }
+};
+
 const createAdvisorAssignment = async (req, res) => {
   try {
     const ctx = await withContext(req);
@@ -812,9 +1308,14 @@ const createAdvisorAssignment = async (req, res) => {
     const advisorName = normalize(req.body.advisorName || req.body.teacher);
     const startSerial = Number(req.body.startSerial || req.body.startId || 0);
     const endSerial = Number(req.body.endSerial || req.body.endId || 0);
+    const studentCount = endSerial - startSerial + 1;
 
     if (!batch || !advisorName || !startSerial || !endSerial || endSerial < startSerial) {
       return res.status(400).json({ success: false, message: "Invalid assignment payload." });
+    }
+
+    if (studentCount !== 10) {
+      return res.status(400).json({ success: false, message: "Each advisor assignment must include exactly 10 students." });
     }
 
     const advisorUser = await User.findOne({ role: "advisor", name: advisorName });
@@ -822,6 +1323,24 @@ const createAdvisorAssignment = async (req, res) => {
     if (advisorUser) {
       const advisorProfile = await Advisor.findOne({ userId: advisorUser._id });
       advisorId = advisorProfile ? advisorProfile._id : null;
+    }
+
+    const existingExact = await AdvisorAssignment.findOne({ batch, advisorName, startSerial, endSerial });
+
+    if (!existingExact) {
+      const overlapping = await AdvisorAssignment.findOne({
+        batch,
+        status: "assigned",
+        startSerial: { $lte: endSerial },
+        endSerial: { $gte: startSerial },
+      });
+
+      if (overlapping) {
+        return res.status(409).json({
+          success: false,
+          message: "This student range overlaps with an existing advisor assignment in the same batch.",
+        });
+      }
     }
 
     const item = await AdvisorAssignment.findOneAndUpdate(
@@ -839,6 +1358,339 @@ const createAdvisorAssignment = async (req, res) => {
     return res.status(201).json({ success: true, message: "Advisor assigned.", data: item });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Could not save assignment.", error: error.message });
+  }
+};
+
+const getAdvisorStudentReport = async (req, res) => {
+  try {
+    const ctx = await withContext(req);
+    if (!ensureRole(res, ctx.user, ["advisor"])) return;
+
+    const studentUserId = normalize(req.query.studentUserId);
+    const studentIdValue = normalize(req.query.studentId);
+
+    if (!studentUserId && !studentIdValue) {
+      return res.status(400).json({ success: false, message: "studentUserId or studentId query is required." });
+    }
+
+    let targetStudent = null;
+    if (studentUserId) {
+      targetStudent = await Student.findOne({ userId: studentUserId }).populate("userId", "name");
+    }
+    if (!targetStudent && studentIdValue) {
+      targetStudent = await Student.findOne({ studentId: studentIdValue }).populate("userId", "name");
+    }
+
+    if (!targetStudent) {
+      return res.status(404).json({ success: false, message: "Student not found." });
+    }
+
+    const comparable = toComparableStudentNumber(targetStudent);
+    if (!Number.isFinite(comparable)) {
+      return res.status(403).json({ success: false, message: "Student is not assigned to this advisor." });
+    }
+
+    const advisorAssignments = await AdvisorAssignment.find({
+      advisorName: ctx.user.name,
+      batch: toBatchPattern(targetStudent.batch),
+      status: "assigned",
+      startSerial: { $lte: comparable },
+      endSerial: { $gte: comparable },
+    }).sort({ createdAt: -1 });
+
+    if (!advisorAssignments.length) {
+      return res.status(403).json({ success: false, message: "You can only view reports of your assigned students." });
+    }
+
+    const semesterRows = await SemesterCgpa.find({ studentId: targetStudent._id }).sort({ updatedAt: -1, semesterLabel: -1 });
+
+    const semesterItems = semesterRows.map((row) => ({
+      semesterLabel: row.semesterLabel,
+      cgpa: Number(Number(row.cgpa || 0).toFixed(2)),
+      trend: row.trend || "stable",
+      updatedAt: row.updatedAt,
+    }));
+
+    const latestSemesterLabel = semesterItems.length ? semesterItems[0].semesterLabel : "";
+    const currentSemesterCgpa = semesterItems.length ? Number(semesterItems[0].cgpa || 0) : 0;
+    const overallCgpa = semesterItems.length
+      ? Number((semesterItems.reduce((sum, item) => sum + Number(item.cgpa || 0), 0) / semesterItems.length).toFixed(2))
+      : 0;
+
+    const attendanceRows = latestSemesterLabel
+      ? await Attendance.find({ studentId: targetStudent._id, semesterLabel: latestSemesterLabel }).populate("courseId").sort({ updatedAt: -1 })
+      : [];
+    const attendanceItems = attendanceRows.map((row) => ({
+      courseCode: row.courseId ? row.courseId.code : "",
+      courseName: row.courseId ? row.courseId.name : "Course",
+      percentage: Number(row.percentage || 0),
+      predictedMark: Number(row.predictedMark || 0),
+      risk: row.risk || "watch",
+    }));
+
+    const ctRows = latestSemesterLabel
+      ? await CtMark.find({ studentId: targetStudent._id, semesterLabel: latestSemesterLabel }).populate("courseId").sort({ updatedAt: -1 })
+      : [];
+    const ctItems = ctRows.map((row) => ({
+      courseCode: row.courseId ? row.courseId.code : "",
+      courseName: row.courseId ? row.courseId.name : "Course",
+      total: Number(row.total || 0),
+      maxMarks: Number(row.maxMarks || 0),
+      performance: row.performance || "average",
+    }));
+
+    const avgAttendance = attendanceItems.length
+      ? Number((attendanceItems.reduce((sum, item) => sum + Number(item.percentage || 0), 0) / attendanceItems.length).toFixed(1))
+      : 0;
+    const avgCtPercent = ctItems.length
+      ? Number((ctItems.reduce((sum, item) => {
+        var maxMarks = Number(item.maxMarks || 0);
+        if (!maxMarks) return sum;
+        return sum + (Number(item.total || 0) / maxMarks) * 100;
+      }, 0) / ctItems.length).toFixed(1))
+      : 0;
+
+    const assignments = await AdvisorAssignment.find({ advisorName: ctx.user.name, status: "assigned" }).sort({ createdAt: -1 });
+    const assignmentByBatch = {};
+    assignments.forEach((assignment) => {
+      const key = normalizeBatchValue(assignment.batch);
+      if (!assignmentByBatch[key]) assignmentByBatch[key] = [];
+      assignmentByBatch[key].push(assignment);
+    });
+
+    const students = await Student.find({}).select("_id studentId serialNo batch");
+    const matchedStudentIds = students.filter((student) => {
+      const key = normalizeBatchValue(student.batch);
+      if (!assignmentByBatch[key]) return false;
+      const studentComparable = toComparableStudentNumber(student);
+      if (!Number.isFinite(studentComparable)) return false;
+      return assignmentByBatch[key].some((assignment) => {
+        return studentComparable >= Number(assignment.startSerial || 0) && studentComparable <= Number(assignment.endSerial || 0);
+      });
+    }).map((student) => String(student._id));
+
+    const rankingRows = await SemesterCgpa.aggregate([
+      { $match: { studentId: { $in: matchedStudentIds.map((id) => new mongoose.Types.ObjectId(id)) } } },
+      {
+        $group: {
+          _id: "$studentId",
+          overall: { $avg: "$cgpa" },
+          latestUpdatedAt: { $max: "$updatedAt" },
+        },
+      },
+      {
+        $lookup: {
+          from: "semester_cgpa",
+          let: { sid: "$_id", lu: "$latestUpdatedAt" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$studentId", "$$sid"] },
+                    { $eq: ["$updatedAt", "$$lu"] },
+                  ],
+                },
+              },
+            },
+            { $project: { _id: 0, cgpa: 1 } },
+          ],
+          as: "latestRows",
+        },
+      },
+      {
+        $project: {
+          overall: { $round: ["$overall", 2] },
+          current: { $round: [{ $ifNull: [{ $arrayElemAt: ["$latestRows.cgpa", 0] }, 0] }, 2] },
+        },
+      },
+    ]);
+
+    const ranked = rankingRows
+      .map((row) => ({
+        studentId: String(row._id),
+        overall: Number(row.overall || 0),
+        current: Number(row.current || 0),
+      }))
+      .sort((a, b) => {
+        if (b.overall !== a.overall) return b.overall - a.overall;
+        return b.current - a.current;
+      });
+
+    const currentStudentRank = ranked.findIndex((item) => item.studentId === String(targetStudent._id)) + 1;
+    const classSize = ranked.length || 0;
+
+    const performanceSummary = {
+      standing: overallCgpa >= 3.5 ? "Good" : overallCgpa >= 3 ? "Moderate" : "At Risk",
+      overallCgpa,
+      currentSemesterCgpa,
+      avgAttendance,
+      avgCtPercent,
+      suggestion: overallCgpa < 3
+        ? "Focus on weak courses and schedule regular advisor check-ins."
+        : avgAttendance < 75
+          ? "Improve class attendance consistency to stabilize performance."
+          : "Performance is stable; maintain current effort and target stronger CT scores.",
+    };
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        student: {
+          userId: targetStudent.userId ? String(targetStudent.userId._id) : "",
+          studentId: targetStudent.studentId,
+          name: targetStudent.userId && targetStudent.userId.name ? targetStudent.userId.name : "Student",
+          batch: targetStudent.batch,
+          department: targetStudent.department,
+        },
+        ranking: {
+          rank: currentStudentRank > 0 ? currentStudentRank : classSize,
+          classSize,
+        },
+        latestSemesterLabel,
+        overallCgpa,
+        currentSemesterCgpa,
+        semesterCgpa: semesterItems,
+        currentSemesterAttendance: attendanceItems,
+        currentSemesterCtMarks: ctItems,
+        performanceSummary,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not load advisor student report.", error: error.message });
+  }
+};
+
+const getAdvisorPerformanceWatchlist = async (req, res) => {
+  try {
+    const ctx = await withContext(req);
+    if (!ensureRole(res, ctx.user, ["advisor"])) return;
+
+    const assignments = await AdvisorAssignment.find({ advisorName: ctx.user.name, status: "assigned" }).sort({ createdAt: -1 });
+    if (!assignments.length) {
+      return res.status(200).json({ success: true, data: { items: [] } });
+    }
+
+    const assignmentByBatch = {};
+    assignments.forEach((assignment) => {
+      const key = normalizeBatchValue(assignment.batch);
+      if (!assignmentByBatch[key]) assignmentByBatch[key] = [];
+      assignmentByBatch[key].push(assignment);
+    });
+
+    const students = await Student.find({}).populate("userId", "name");
+    const assignedStudents = students.filter((student) => {
+      const key = normalizeBatchValue(student.batch);
+      const ranges = assignmentByBatch[key] || [];
+      if (!ranges.length) return false;
+      const comparable = toComparableStudentNumber(student);
+      if (!Number.isFinite(comparable)) return false;
+      return ranges.some((range) => comparable >= Number(range.startSerial || 0) && comparable <= Number(range.endSerial || 0));
+    });
+
+    if (!assignedStudents.length) {
+      return res.status(200).json({ success: true, data: { items: [] } });
+    }
+
+    const studentIds = assignedStudents.map((student) => student._id);
+    const semesterRows = await SemesterCgpa.find({ studentId: { $in: studentIds } }).sort({ updatedAt: -1 });
+    const attendanceRows = await Attendance.find({ studentId: { $in: studentIds } }).sort({ updatedAt: -1 });
+    const ctRows = await CtMark.find({ studentId: { $in: studentIds } }).sort({ updatedAt: -1 });
+
+    const latestSemesterByStudent = new Map();
+    const latestCgpaByStudent = new Map();
+    const cgpaAggByStudent = new Map();
+
+    semesterRows.forEach((row) => {
+      const sid = String(row.studentId);
+      const current = cgpaAggByStudent.get(sid) || { sum: 0, count: 0 };
+      current.sum += Number(row.cgpa || 0);
+      current.count += 1;
+      cgpaAggByStudent.set(sid, current);
+
+      if (!latestSemesterByStudent.has(sid)) {
+        latestSemesterByStudent.set(sid, row.semesterLabel || "");
+        latestCgpaByStudent.set(sid, Number(row.cgpa || 0));
+      }
+    });
+
+    const attendanceAvgByStudentSemester = new Map();
+    attendanceRows.forEach((row) => {
+      const key = String(row.studentId) + "::" + String(row.semesterLabel || "");
+      const current = attendanceAvgByStudentSemester.get(key) || { sum: 0, count: 0 };
+      current.sum += Number(row.percentage || 0);
+      current.count += 1;
+      attendanceAvgByStudentSemester.set(key, current);
+    });
+
+    const ctAvgByStudentSemester = new Map();
+    ctRows.forEach((row) => {
+      const key = String(row.studentId) + "::" + String(row.semesterLabel || "");
+      const maxMarks = Number(row.maxMarks || 0);
+      if (!maxMarks) return;
+      const percentage = (Number(row.total || 0) / maxMarks) * 100;
+      const current = ctAvgByStudentSemester.get(key) || { sum: 0, count: 0 };
+      current.sum += percentage;
+      current.count += 1;
+      ctAvgByStudentSemester.set(key, current);
+    });
+
+    const riskBucket = (value, thresholds) => {
+      if (value <= thresholds.high) return "high";
+      if (value <= thresholds.medium) return "medium";
+      return "low";
+    };
+
+    const riskScore = (risk) => {
+      if (risk === "high") return 3;
+      if (risk === "medium") return 2;
+      return 0;
+    };
+
+    const items = assignedStudents.map((student) => {
+      const sid = String(student._id);
+      const latestSemesterLabel = latestSemesterByStudent.get(sid) || "";
+      const semKey = sid + "::" + latestSemesterLabel;
+
+      const currentCgpa = Number(latestCgpaByStudent.get(sid) || 0);
+      const cgpaAgg = cgpaAggByStudent.get(sid) || { sum: 0, count: 0 };
+      const overallCgpa = cgpaAgg.count ? Number((cgpaAgg.sum / cgpaAgg.count).toFixed(2)) : 0;
+
+      const attendanceAgg = attendanceAvgByStudentSemester.get(semKey) || { sum: 0, count: 0 };
+      const attendancePercent = attendanceAgg.count ? Number((attendanceAgg.sum / attendanceAgg.count).toFixed(1)) : 0;
+
+      const ctAgg = ctAvgByStudentSemester.get(semKey) || { sum: 0, count: 0 };
+      const ctPercent = ctAgg.count ? Number((ctAgg.sum / ctAgg.count).toFixed(1)) : 0;
+
+      const cgpaRisk = riskBucket(currentCgpa, { high: 2.5, medium: 3.0 });
+      const attendanceRisk = riskBucket(attendancePercent, { high: 60, medium: 75 });
+      const ctRisk = riskBucket(ctPercent, { high: 50, medium: 65 });
+      const totalRiskScore = riskScore(cgpaRisk) + riskScore(attendanceRisk) + riskScore(ctRisk);
+
+      return {
+        userId: student.userId ? String(student.userId._id) : "",
+        studentId: student.studentId,
+        name: student.userId && student.userId.name ? student.userId.name : "Student",
+        batch: normalizeBatchValue(student.batch),
+        latestSemesterLabel,
+        currentCgpa: Number(currentCgpa.toFixed(2)),
+        overallCgpa,
+        attendancePercent,
+        ctPercent,
+        cgpaRisk,
+        attendanceRisk,
+        ctRisk,
+        riskScore: totalRiskScore,
+      };
+    }).filter((item) => item.riskScore >= 6)
+      .sort((a, b) => {
+        if (b.riskScore !== a.riskScore) return b.riskScore - a.riskScore;
+        return a.currentCgpa - b.currentCgpa;
+      });
+
+    return res.status(200).json({ success: true, data: { items } });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not load performance watchlist.", error: error.message });
   }
 };
 
@@ -884,6 +1736,7 @@ const sendMessage = async (req, res) => {
     }
 
     const toRole = normalizeLower(req.body.toRole || (ctx.user.role === "student" ? "advisor" : "student"));
+    const toUserId = normalize(req.body.toUserId);
     const toName = normalize(req.body.toName || req.body.studentName || req.body.advisorName || req.body.advisor || req.body.toStudent);
     const subject = normalize(req.body.subject);
     const content = normalize(req.body.content || req.body.message || req.body.sms);
@@ -894,7 +1747,10 @@ const sendMessage = async (req, res) => {
     }
 
     let targetUser = null;
-    if (toName) {
+    if (toUserId) {
+      targetUser = await User.findOne({ _id: toUserId, role: toRole });
+    }
+    if (!targetUser && toName) {
       targetUser = await User.findOne({ role: toRole, name: toName });
     }
     if (!targetUser) {
@@ -913,7 +1769,7 @@ const sendMessage = async (req, res) => {
       channel: channel === "sms" ? "sms" : "portal",
       subject,
       content,
-      status: ctx.user.role === "student" ? "pending" : "sent",
+      status: "sent",
     });
 
     return res.status(201).json({
@@ -937,6 +1793,8 @@ const sendMessage = async (req, res) => {
 module.exports = {
   getStudentCourses,
   addStudentCourse,
+  updateStudentCourse,
+  clearStudentSemesterData,
   getStudentAttendance,
   saveStudentAttendance,
   getStudentCtMarks,
@@ -947,9 +1805,15 @@ module.exports = {
   saveSemesterCgpa,
   getStudentCumulativeCgpa,
   getStudentRanking,
+  getStudentAssignedAdvisor,
+  getAdvisorStudentsByBatch,
+  getAdvisorStudentReport,
+  getAdvisorPerformanceWatchlist,
   getNotices,
   createNotice,
+  getAdminAdvisors,
   getAdvisorAssignments,
+  getAdminStudentsByBatch,
   createAdvisorAssignment,
   getMessages,
   sendMessage,
