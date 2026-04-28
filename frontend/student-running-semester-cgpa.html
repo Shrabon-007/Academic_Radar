@@ -34,12 +34,14 @@
     <a class="nav-link" href="student-semester-cgpa.html">Semester CGPA</a>
     <a class="nav-link" href="student-running-semester-cgpa.html">Running Calculator</a>
     <a class="nav-link" href="student-cumulative-cgpa.html">Overall CGPA</a>
+    <a class="nav-link" href="student-notices.html">Notices</a>
     <a class="nav-link" href="student-message-advisor.html">Messages</a>
+    <a class="nav-link" href="student-settings.html">Settings</a>
   </nav>
 
   <main class="page">
     <h1 class="section-title">Running Semester CGPA Calculator</h1>
-    <p class="section-subtitle">Input all current semester course grade points. System will auto-calculate semester CGPA and update your Semester CGPA page record.</p>
+    <p class="section-subtitle">Enter current semester grade points to estimate semester CGPA before final submission.</p>
 
     <section class="grid grid-2">
       <article class="card">
@@ -92,9 +94,9 @@
         <h3>Computation Summary</h3>
         <div class="stats"><strong id="runningTotalCredits">0.00</strong><span class="muted">Total Credits Counted</span></div>
         <div class="stats mt-12"><strong id="runningWeightedPoints">0.00</strong><span class="muted">Sum(Credit x Grade Point)</span></div>
-        <div class="alert mt-12">Formula: Semester CGPA = Sum(Credit x Grade Point) / Sum(Credit), where only courses with grade point >= 2.00 are counted.</div>
+        <div class="alert mt-12">Semester CGPA is calculated from counted credits and grade points. Courses with GP below 2.00 are excluded from the CGPA calculation.</div>
         <p class="muted mt-12" id="runningFailedCourseSummary">Failed courses (GP &lt; 2.00) are excluded from CGPA.</p>
-        <p class="muted mt-12">After save, this semester result is pushed into the existing Semester CGPA page automatically.</p>
+        <p class="muted mt-12">After save, this result is synced to the Semester CGPA page automatically.</p>
         <a class="btn btn-outline mt-12" href="student-semester-cgpa.html">Go To Semester CGPA Page</a>
       </article>
     </section>

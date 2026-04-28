@@ -662,7 +662,7 @@
                 }
               });
             })).then(function () {
-              showToast("Attendance saved to database.");
+              showToast("Attendance saved successfully.");
             }).catch(function (error) {
               showToast(error.message || "Attendance saved locally only.");
             });
@@ -944,7 +944,7 @@
                 }
               });
             })).then(function () {
-              showToast("CT marks saved to database.");
+              showToast("CT marks saved successfully.");
             }).catch(function (error) {
               showToast(error.message || "CT marks saved locally only.");
             });
@@ -1089,7 +1089,7 @@
       if (editBtn) {
         editBtn.addEventListener("click", function () {
           applyCourseToForm(item);
-          showToast("Course loaded into form. Update and submit.");
+          showToast("Course loaded. You can now edit and save changes.");
         });
       }
       tableBody.appendChild(tr);
@@ -1164,7 +1164,7 @@
       var courseType = (courseTypeEl || {}).value || "theory";
 
       if (!code.trim() || !name.trim() || !teacherPrimary.trim()) {
-        showToast("Please fill course code, name and teacher 1.");
+        showToast("Please enter course code, course name, and primary teacher.");
         return;
       }
 
@@ -1193,7 +1193,7 @@
         loadCourseRows();
         addCourseForm.reset();
         resetCourseEditor();
-        showToast(wasEditing ? "Course updated in database." : "Course added to database.");
+        showToast(wasEditing ? "Course updated successfully." : "Course added successfully.");
 
         var courses = safeRead(STORAGE_KEYS.courses, []);
         var localNext = {
@@ -1249,7 +1249,7 @@
           targetCgpa: Number(targetCgpa) || 0,
           updatedAt: new Date().toISOString()
         });
-        showToast("Semester setup saved to database.");
+        showToast("Semester setup saved successfully.");
       }).catch(function (error) {
         showToast(error.message || "Failed to save semester setup.");
       });
@@ -1266,7 +1266,7 @@
           return;
         }
 
-        var yes = window.confirm("Clear all current semester data for " + semesterValue + "? This will remove courses, attendance, CT marks, and semester setup for that semester.");
+        var yes = window.confirm("Clear all records for " + semesterValue + "? This will remove courses, attendance, CT marks, semester setup, and semester CGPA for that semester.");
         if (!yes) return;
 
         apiRequest("/portal/student/semester-data", {
@@ -1371,7 +1371,7 @@
       var note = (document.getElementById("note") || {}).value || "";
 
       if (!semester || !cgpaVal) {
-        showToast("Please enter valid semester and CGPA.");
+        showToast("Please provide a valid semester and CGPA.");
         return;
       }
 
@@ -1398,7 +1398,7 @@
         }
         safeWrite(STORAGE_KEYS.semesterCgpa, entries);
         loadHistory();
-        showToast("Semester CGPA updated in database.");
+        showToast("Semester CGPA saved successfully.");
       }).catch(function (error) {
         showToast(error.message || "Failed to update semester CGPA.");
       });
@@ -1578,7 +1578,7 @@
           }
 
           safeWrite(STORAGE_KEYS.semesterCgpa, entries);
-          showToast("Semester CGPA calculated and synced.");
+          showToast("Semester CGPA calculated and saved.");
           window.setTimeout(function () {
             window.location.href = "student-semester-cgpa.html";
           }, 500);
@@ -2501,7 +2501,7 @@
           var meetingMode = (meetingModeEl || {}).value || "in-person";
 
           if (!advisor.trim()) {
-            showToast("No advisor is assigned for your account yet.");
+            showToast("No advisor is assigned to your account yet.");
             return;
           }
 
@@ -2552,7 +2552,7 @@
             loadMessagesFromApi(function (items) {
               renderStudentMessageRows(items);
             });
-            showToast("Meeting request sent to advisor.");
+            showToast("Message sent to advisor successfully.");
           }).catch(function (error) {
             showToast(error.message || "Failed to send message.");
           });
