@@ -785,7 +785,7 @@
     }
 
     function getPerformance(earned, maximum) {
-      if (!maximum) return { text: "N/A", cls: "badge-warning" };
+      if (!maximum || earned === 0) return { text: "Average", cls: "badge-warning" };
       var ratio = earned / maximum;
       if (ratio >= 0.8) return { text: "Strong", cls: "badge-success" };
       if (ratio >= 0.6) return { text: "Average", cls: "badge-warning" };

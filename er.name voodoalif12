@@ -1,0 +1,21 @@
+[33m151905e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m Fix static student risk reporting and update attendance UI defaults
+[33m5147632[m Final version 3
+[33m1b41503[m Final version 2
+[33mc0077d7[m Final version Part 1
+[33m6cf9546[m Advisor,student,admin complete
+[33m8658bb0[m student panel complete with backend
+[33m0cc68df[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m Track backend source files and fix gitignore src rule
+[33mb6a5a94[m Complete student backend/frontend integration and ranking
+[33m4065172[m authentication is complete
+[33m9fa800f[m Merge frontend v3 from master into main
+[33mcb52139[m[33m ([m[1;35mrefs/stash[m[33m)[m On (no branch): temp-before-main-merge-frontend-v3
+[33m41ad5b3[m index on (no branch): 9a773fc 3rd version of frontend
+[33ma970039[m untracked files on (no branch): 9a773fc 3rd version of frontend
+[33m9a773fc[m 3rd version of frontend
+[33mad8adbe[m[33m ([m[1;32mbackup-before-history-cleanup-ad8[m[33m)[m 3rd version of frontend
+[33me315969[m[33m ([m[1;32mrecover-css-and-html[m[33m)[m css and html
+[33m72ba565[m[33m ([m[1;32mrecover-only-html-1[m[33m)[m only html
+[33m359227a[m Initial commit
+[33m1172550[m[33m ([m[1;32mrestore-full-project[m[33m)[m frontend version 1
+[33mda63784[m 2nd version(frontend)
+[33m8494c50[m 1st version

@@ -1782,8 +1782,8 @@ const getAdvisorPerformanceWatchlist = async (req, res) => {
       const ctPercent = ctAgg.count ? Number((ctAgg.sum / ctAgg.count).toFixed(1)) : 0;
 
       const cgpaRisk = riskBucket(currentCgpa, { high: 2.5, medium: 3.0 });
-      const attendanceRisk = riskBucket(attendancePercent, { high: 60, medium: 75 });
-      const ctRisk = riskBucket(ctPercent, { high: 50, medium: 65 });
+      const attendanceRisk = attendanceAgg.count === 0 ? "low" : riskBucket(attendancePercent, { high: 60, medium: 75 });
+      const ctRisk = ctAgg.count === 0 ? "low" : riskBucket(ctPercent, { high: 50, medium: 65 });
       const totalRiskScore = riskScore(cgpaRisk) + riskScore(attendanceRisk) + riskScore(ctRisk);
 
       return {

@@ -1,0 +1,610 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{setspace}
+
+\setstretch{1.15}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  urlcolor=blue,
+  citecolor=blue,
+  pdftitle={Final Report - Academic Radar},
+  pdfauthor={Academic Radar Team}
+}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\lstset{
+  basicstyle=\ttfamily\small,
+  frame=single,
+  breaklines=true,
+  columns=fullflexible,
+  showstringspaces=false,
+  keepspaces=true,
+  tabsize=2
+}
+
+\newcommand{\figplaceholder}[2]{%
+\begin{figure}[H]
+\centering
+\fbox{\parbox{0.92\linewidth}{\centering\textbf{#1}\\[0.5em]#2}}
+\caption{#1}
+\end{figure}
+}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+{\Large Internet Programming (Sessional) [CSE-326] \par}
+\vspace{1.5cm}
+{\huge\bfseries Final Report - Academic Radar \par}
+\vspace{0.3cm}
+{\Large Backend Lab Report \par}
+\vspace{1.3cm}
+{\large Proposed Project Name: Academic Radar \par}
+\vspace{1.2cm}
+\begin{tabular}{ll}
+Submitted By: & [Your Name / Group Name] \\
+Student ID: & [Your Student ID] \\
+Section/Batch: & [Your Section / Batch] \\
+\end{tabular}
+
+\vfill
+{\large Submitted To \par}
+\vspace{0.2cm}
+{\large Md. Rashadur Rahman \par}
+{\large Assistant Professor \par}
+{\large Department of Computer Science and Engineering (CSE) \par}
+{\large Chittagong University of Engineering \& Technology (CUET) \par}
+\vspace{0.8cm}
+{\large Chattogram-4349, Bangladesh \par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{Executive Summary}
+Academic Radar is a rule-based full-stack academic risk monitoring system designed to help students, advisors, and academic administration detect performance problems early. The project was proposed to identify students who are at risk before failure or dropout occurs, using measurable indicators such as attendance, CT marks, semester GPA, cumulative GPA trends, and advisor review data.
+
+The final implementation includes a Node.js and Express backend, a MongoDB database with Mongoose models, JWT-based authentication, and a browser-based frontend that communicates with the backend through JSON APIs. The backend supports role-based access for students, advisors, and administrators. Students can manage courses, record attendance, enter CT marks, store semester setup data, and calculate semester and cumulative CGPA. Advisors can review ranked students, inspect detailed risk reports, and monitor watchlists. Administrators can publish notices and assign advisors to student groups.
+
+The major achievements of the project are the following:
+\begin{itemize}[leftmargin=*]
+  \item A secure role-based authentication system with password hashing and token-based access control.
+  \item Working course, attendance, CT marks, semester setup, and semester CGPA APIs.
+  \item Rule-based academic risk scoring and trend analysis for early warning support.
+  \item Advisor dashboards for student ranking, risk reporting, and intervention-oriented review.
+  \item Administrative notice publishing and advisor assignment workflows.
+\end{itemize}
+
+Live demo link: \textit{Not deployed yet. Replace this line with the hosted URL if deployment becomes available.}
+
+\section{Project Recap and Requirements Analysis}
+\subsection{Original Proposal Recap}
+The original proposal for Academic Radar focused on three goals: early detection of academically at-risk students, timely advisor-student interaction, and preventive guidance before failure or dropout occurs. The final backend follows the same direction and turns the proposal into a working API-driven system.
+
+\subsection{Objectives}
+The main project objectives remain aligned with the proposal:
+\begin{enumerate}[leftmargin=*]
+  \item Detect students who are academically at risk at an early stage using measurable academic indicators.
+  \item Support timely advisor-student interaction by providing advisors with early academic risk insights.
+  \item Enable preventive academic guidance before failure or dropout occurs.
+\end{enumerate}
+
+\subsection{Motivation}
+Academic problems usually develop gradually. A student rarely becomes at risk overnight; instead, warning signs appear through low attendance, weak CT performance, and declining GPA trends. The system was motivated by the need to capture those warning signs in one place so that advisors can act earlier and students can receive guidance before the situation becomes critical.
+
+\subsection{Stakeholders}
+The system is built around three primary stakeholder groups:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Students}: review courses, attendance, CT marks, GPA trends, and messages.
+  \item \textbf{Advisors / Faculty Members}: inspect risk signals, review student reports, and monitor assigned batches.
+  \item \textbf{Academic Administration}: publish notices, assign advisors, and observe overall academic trends.
+\end{itemize}
+
+\subsection{Related Work}
+The proposal reviewed related research on academic early warning systems and student performance prediction. The final system takes the same prevention-oriented idea but implements a lightweight rule-based backend rather than a machine-learning pipeline.
+\begin{itemize}[leftmargin=*]
+  \item \textit{Development of an early warning system for higher education institutions by predicting first-year student academic performance}
+  \item \textit{Awareness to Action: Student Knowledge of and Responses to an Early Alert System}
+  \item \textit{Predicting student dropouts with machine learning: An empirical study in Finnish higher education}
+\end{itemize}
+
+\subsection{Feature Implementation Table}
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{L{8cm}L{3cm}}
+\toprule
+\textbf{Proposed Feature} & \textbf{Status} \\
+\midrule
+Student Data Collection Module & Implemented \\
+Risk Scoring Engine & Implemented \\
+Pattern Detection Module & Implemented \\
+Advisor Alert System & Implemented \\
+Intervention Tracking Module & Partially Implemented \\
+Analytics Dashboard & Implemented \\
+\bottomrule
+\end{tabular}
+\caption{Mapping of proposed Academic Radar features to the final implementation status.}
+\end{table}
+
+\subsection{Updated Stakeholder Analysis}
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{L{3cm}L{4.8cm}L{4.8cm}}
+\toprule
+\textbf{Stakeholder} & \textbf{Main Need} & \textbf{How the System Helps} \\
+\midrule
+Students & Understand their own risk level early & Shows attendance, CT marks, semester CGPA, and backlog/short-course warnings \\
+Advisors & Review students who need support & Provides batch-wise ranking, watchlists, and detailed student reports \\
+Administration & Monitor overall academic quality & Provides notices, advisor assignments, and aggregated student information \\
+\bottomrule
+\end{tabular}
+\caption{Updated stakeholder analysis for the final implementation.}
+\end{table}
+
+\section{System Architecture and Design}
+\subsection{Architecture Diagram}
+\figplaceholder{Figure 1: System Architecture Diagram}{Insert the UML diagram showing frontend, backend, database, and the data flow between student, advisor, admin, and MongoDB.}
+
+\subsection{Entity-Relationship Diagram}
+\figplaceholder{Figure 2: ER Diagram with Cardinality and Attributes}{Insert the complete ER diagram with cardinalities and attributes for users, students, advisors, admins, courses, attendance, CT marks, semester setup, semester CGPA, notices, advisor assignments, and messages.}
+
+\subsection{Database Entities and Cardinalities}
+The backend uses MongoDB collections that map directly to the academic workflow. The main relations are:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{User} has a one-to-one logical relation with \textbf{Student}, \textbf{Advisor}, or \textbf{Admin} depending on role.
+  \item \textbf{Student} has one-to-many relations with \textbf{StudentCourse}, \textbf{Attendance}, \textbf{CtMark}, \textbf{SemesterSetup}, \textbf{SemesterCgpa}, and \textbf{Message}.
+  \item \textbf{Course} has one-to-many relations with \textbf{StudentCourse}, \textbf{Attendance}, and \textbf{CtMark}.
+  \item \textbf{Admin} creates one-to-many \textbf{Notice} and \textbf{AdvisorAssignment} records.
+  \item \textbf{AdvisorAssignment} maps a batch range to an advisor and is used to determine which students belong to that advisor.
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{L{3.1cm}L{8.7cm}}
+\toprule
+\textbf{Entity} & \textbf{Key Attributes} \\
+\midrule
+Users & name, email, passwordHash, role, lastLoginAt \\
+Students & userId, studentId, serialNo, batch, department \\
+Advisors & userId, advisorId, department, batchFocus \\
+Admins & userId \\
+Courses & code, name, credit, courseType, department, teacherName, teacherNames, semesterLabel \\
+Student\_Courses & studentId, courseId, semesterLabel, status \\
+Attendance & studentId, courseId, semesterLabel, classStates, classesHeld, attended, percentage, predictedMark, risk \\
+Ct\_Marks & studentId, courseId, semesterLabel, ct1..ct5, totalCt, bestCount, maxMarks, total, performance \\
+Semester\_Setup & studentId, semesterLabel, totalCredit, targetCgpa, updatedByUserId \\
+Semester\_Cgpa & studentId, semesterLabel, cgpa, trend, note, updatedByUserId \\
+Notices & createdByAdminId, title, target, priority, status, content, publishedAt \\
+Advisor\_Assignments & batch, advisorName, advisorId, startSerial, endSerial, status, createdByAdminId \\
+Messages & fromUserId, toUserId, fromRole, toRole, channel, subject, content, status, readAt \\
+\bottomrule
+\end{tabular}
+\caption{Core backend entities and attributes.}
+\end{table}
+
+\subsection{Technology Rationale}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Node.js and Express}: chosen for a lightweight HTTP API layer that matches the JavaScript frontend and keeps the codebase simple.
+  \item \textbf{MongoDB and Mongoose}: chosen because semester-based academic data, nested course information, and evolving analytics are easier to model in documents than in rigid tables.
+  \item \textbf{JWT}: used for stateless authentication and role-based API access.
+  \item \textbf{bcryptjs}: used for password hashing before storage.
+  \item \textbf{CORS, Morgan, and dotenv}: used for cross-origin access, request logging, and environment-based configuration.
+\end{itemize}
+
+Alternatives considered included a relational stack with PostgreSQL or a Python backend. The final choice favored Node.js and MongoDB because the frontend is already JavaScript-based and the data model changes frequently across semesters, batches, and role-based workflows.
+
+\subsection{Endpoint Documentation}
+\small
+\begin{longtable}{L{1.6cm}L{3.2cm}L{3.4cm}L{5.0cm}L{2.2cm}}
+\caption{Backend API documentation for Academic Radar.}\\
+\toprule
+\textbf{Method} & \textbf{Endpoint} & \textbf{Parameters} & \textbf{Response} & \textbf{Purpose} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Method} & \textbf{Endpoint} & \textbf{Parameters} & \textbf{Response} & \textbf{Purpose} \\
+\midrule
+\endhead
+POST & /api/auth/register & role, name, email, password, and role-specific profile data & user object and success message & Register a new student, advisor, or admin \\
+POST & /api/auth/login & role, email, password & token, user, profile & Authenticate user and issue JWT \\
+GET & /api/auth/me & Bearer token & user and profile & Load current session user details \\
+PUT & /api/auth/me & profile fields & updated user data & Update display/profile information \\
+POST & /api/auth/logout & Bearer token & success message & End client session \\
+GET & /api/portal/student/courses & Bearer token & items[] & Load a student's registered courses \\
+POST & /api/portal/student/courses & code, name, credit, courseType, teacher data, semester & saved course record & Add a new course for the student \\
+PUT & /api/portal/student/courses/:courseId & same as course create payload & updated course record & Edit an existing registered course \\
+DELETE & /api/portal/student/semester-data & semesterLabel & deletion summary & Remove all records for a semester \\
+GET & /api/portal/student/attendance & semesterLabel optional & attendance items[] & Load attendance summaries \\
+PUT & /api/portal/student/attendance & semesterLabel, courseCode, classStates[] & saved attendance record & Save attendance and predicted mark \\
+GET & /api/portal/student/ct-marks & semesterLabel optional & CT marks items[] & Load CT marks and performance data \\
+PUT & /api/portal/student/ct-marks & semesterLabel, courseCode, ct[] & saved CT record & Save CT marks using best-count policy \\
+GET & /api/portal/student/semester-setup & Bearer token & items[] & Load semester setup records \\
+PUT & /api/portal/student/semester-setup & semester, totalCredit, targetCgpa & saved setup record & Store semester planning data \\
+GET & /api/portal/student/semester-cgpa & Bearer token & items[] & Load semester CGPA history \\
+PUT & /api/portal/student/semester-cgpa & semester, cgpa, note & saved semester CGPA record & Store semester CGPA and trend \\
+GET & /api/portal/student/cumulative-cgpa & Bearer token & timeline, shortCourses, backlogCourses & Compute cumulative CGPA and weak courses \\
+GET & /api/portal/student/ranking & scope optional & rank, percentile, cumulativeCgpa, latestSemesterCgpa & Rank student within batch/department \\
+GET & /api/portal/student/advisor & Bearer token & advisor object or null & Resolve assigned advisor \\
+GET & /api/portal/advisor/students & batch optional & batches, items[] & Show advisor's assigned students \\
+GET & /api/portal/advisor/student-report & studentUserId or studentId & student, ranking, attendance, CT, CGPA, summary & Build detailed student report for advisors \\
+GET & /api/portal/advisor/performance-watchlist & Bearer token & items[] & Show high-risk assigned students \\
+GET & /api/portal/notices & Bearer token & items[] & Load notices based on role \\
+POST & /api/portal/admin/notices & title, content, target, priority & saved notice record & Publish a new notice \\
+GET & /api/portal/admin/advisors & Bearer token & items[] & List advisors and advisee counts \\
+GET & /api/portal/admin/assignments & Bearer token & items[] & Show advisor assignment history \\
+GET & /api/portal/admin/students & batch & items[] & List students for a selected batch \\
+POST & /api/portal/admin/assignments & batch, advisorName, startSerial, endSerial & saved assignment record & Assign an advisor to 10 students \\
+GET & /api/portal/messages & Bearer token & items[] & Load portal messages \\
+POST & /api/portal/messages & toRole, toUserId/toName, subject, content, channel & saved message record & Send advisor/student/admin messages \\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{Backend Implementation}
+\subsection{Application Bootstrap}
+The backend starts by loading environment variables, connecting to MongoDB, enabling middleware, and mounting the API routers.
+
+\begin{lstlisting}
+const dotenv = require("dotenv");
+
+dotenv.config();
+
+const app = require("./app");
+const { connectDatabase } = require("./config/db");
+
+const PORT = Number(process.env.PORT) || 5000;
+
+const startServer = async () => {
+  try {
+    const connection = await connectDatabase();
+    console.log(`MongoDB connected: ${connection.connection.host}/${connection.connection.name}`);
+
+    app.listen(PORT, () => {
+      console.log(`Backend server running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error("Failed to start backend server:", error.message);
+    process.exit(1);
+  }
+};
+
+startServer();
+\end{lstlisting}
+
+\begin{lstlisting}
+const express = require("express");
+const cors = require("cors");
+const morgan = require("morgan");
+
+const healthRoutes = require("./routes/health.routes");
+const authRoutes = require("./routes/auth.routes");
+const portalRoutes = require("./routes/portal.routes");
+
+const app = express();
+
+app.use(cors({ origin: true, credentials: false }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(morgan("dev"));
+
+app.use("/api/health", healthRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/portal", portalRoutes);
+
+module.exports = app;
+\end{lstlisting}
+
+\subsection{Authentication and Authorization}
+The authentication layer hashes passwords with bcrypt, issues JWT tokens, and stores role-specific profiles. Authorization is enforced through a bearer-token middleware that rejects missing, invalid, or expired tokens.
+
+\begin{lstlisting}
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
+const signToken = (user) => {
+  return jwt.sign(
+    {
+      sub: user._id.toString(),
+      role: user.role,
+      email: user.email,
+      name: user.name,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+    }
+  );
+};
+
+const login = async (req, res) => {
+  const user = await User.findOne({ email, role });
+  const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+  const token = signToken(user);
+
+  return res.status(200).json({
+    success: true,
+    message: "Login successful.",
+    data: {
+      token,
+      user: { id: user._id, role: user.role, name: user.name, email: user.email },
+      profile,
+    },
+  });
+};
+\end{lstlisting}
+
+\begin{lstlisting}
+const jwt = require("jsonwebtoken");
+
+const authGuard = (req, res, next) => {
+  const authHeader = req.headers.authorization || "";
+  const [scheme, token] = authHeader.split(" ");
+
+  if (scheme !== "Bearer" || !token) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized. Missing bearer token.",
+    });
+  }
+
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    req.auth = payload;
+    return next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized. Invalid or expired token.",
+    });
+  }
+};
+\end{lstlisting}
+
+\subsection{Schema Creation and Data Population}
+The backend uses Mongoose schemas to define collections and indexes. The repository also contains a refinement script that creates collections and synchronizes indexes so the frontend-driven backend schema remains consistent.
+
+\begin{lstlisting}
+const mongoose = require("mongoose");
+
+const courseSchema = new mongoose.Schema({
+  code: { type: String, required: true, trim: true, uppercase: true, index: true },
+  name: { type: String, required: true, trim: true, maxlength: 180 },
+  credit: { type: Number, required: true, min: 0, max: 6 },
+  courseType: { type: String, enum: ["theory", "lab"], required: true, default: "theory", index: true },
+  department: { type: String, trim: true, default: "", index: true },
+  teacherName: { type: String, trim: true, default: "" },
+  teacherNames: { type: [String], default: [] },
+  totalClasses: { type: Number, min: 1, default: 39 },
+  semesterLabel: { type: String, trim: true, default: "", index: true },
+}, { timestamps: true, collection: "courses" });
+\end{lstlisting}
+
+\begin{lstlisting}
+const mongoose = require("mongoose");
+require("dotenv").config();
+
+async function syncModel(model) {
+  await model.createCollection().catch(() => {});
+  await model.syncIndexes();
+  console.log("DB_SYNC:", model.collection.collectionName);
+}
+
+async function run() {
+  await mongoose.connect(process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/academicradar");
+
+  const models = [User, Student, Advisor, Admin, Course, StudentCourse, Attendance, CtMark, SemesterSetup, SemesterCgpa, Notice, AdvisorAssignment, Message];
+  for (const model of models) {
+    await syncModel(model);
+  }
+
+  console.log("DB_SYNC_DONE: frontend-driven schema is ready");
+  await mongoose.disconnect();
+}
+\end{lstlisting}
+
+\subsection{Attendance and CT Mark Business Logic}
+Attendance and CT marks are converted into marks using fixed rules and validated against the course type and credit value. The backend resolves the actual course document before saving, which prevents mismatched course data across semesters.
+
+\begin{lstlisting}
+const course = await resolveCourseForStudent(ctx.student._id, semesterLabel, courseCode);
+const classStates = statesRaw.map((state) => {
+  const normalized = normalize(state).toUpperCase();
+  if (normalized === "P" || normalized === "A") return normalized;
+  return "-";
+});
+
+const present = classStates.filter((x) => x === "P").length;
+const absent = classStates.filter((x) => x === "A").length;
+const held = present + absent;
+const percentage = held ? Math.round((present / held) * 100) : 0;
+const predictedMark = getAttendanceMark(percentage, course.credit, course.courseType);
+const risk = getAttendanceRisk(percentage);
+\end{lstlisting}
+
+\begin{lstlisting}
+const ctArrayInput = Array.isArray(req.body.ct) ? req.body.ct : [];
+const ct1 = clamp(ctArrayInput[0] !== undefined ? ctArrayInput[0] : req.body.ct1, 0, 20);
+const ct2 = clamp(ctArrayInput[1] !== undefined ? ctArrayInput[1] : req.body.ct2, 0, 20);
+const ct3 = clamp(ctArrayInput[2] !== undefined ? ctArrayInput[2] : req.body.ct3, 0, 20);
+const ct4 = clamp(ctArrayInput[3] !== undefined ? ctArrayInput[3] : req.body.ct4, 0, 20);
+const ct5 = clamp(ctArrayInput[4] !== undefined ? ctArrayInput[4] : req.body.ct5, 0, 20);
+
+const policy = getCtPolicy(course.courseType, course.credit);
+const values = [ct1, ct2, ct3, ct4, ct5];
+const activeValues = values.slice(0, policy.totalCt);
+const sorted = activeValues.slice().sort((a, b) => b - a);
+const total = sorted.slice(0, policy.bestCount).reduce((sum, value) => sum + value, 0);
+const performance = getCtPerformance(total, policy.maxMarks);
+\end{lstlisting}
+
+\subsection{Semester CGPA and Analytics Queries}
+The backend stores semester CGPA values and derives trend information from earlier semesters. Cumulative CGPA and advisor ranking are computed from MongoDB queries instead of hard-coded calculations in the frontend.
+
+\begin{lstlisting}
+const rows = await SemesterCgpa.find({ studentId: ctx.student._id }).sort({ semesterLabel: 1, updatedAt: 1 });
+const timeline = [];
+let sum = 0;
+rows.forEach((row, idx) => {
+  sum += Number(row.cgpa || 0);
+  timeline.push({
+    semesterLabel: row.semesterLabel,
+    semesterCgpa: row.cgpa,
+    cumulativeCgpa: Number((sum / (idx + 1)).toFixed(2)),
+  });
+});
+\end{lstlisting}
+
+\begin{lstlisting}
+const cgpaAgg = await SemesterCgpa.aggregate([
+  { $match: { studentId: { $in: studentIds } } },
+  {
+    $group: {
+      _id: "$studentId",
+      cumulativeCgpa: { $avg: "$cgpa" },
+      latestUpdatedAt: { $max: "$updatedAt" },
+    },
+  },
+  {
+    $project: {
+      cumulativeCgpa: { $round: ["$cumulativeCgpa", 2] },
+      latestSemesterCgpa: {
+        $round: [{ $ifNull: [{ $arrayElemAt: ["$latestRows.cgpa", 0] }, 0] }, 2],
+      },
+    },
+  },
+]);
+\end{lstlisting}
+
+\subsection{Server-side Validation and Error Management}
+The backend uses a consistent error strategy:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{400 Bad Request} for missing or invalid input fields.
+  \item \textbf{401 Unauthorized} when the bearer token is missing or invalid.
+  \item \textbf{403 Forbidden} when a user has the wrong role or tries to access a restricted report.
+  \item \textbf{404 Not Found} when the profile, student, course, or assignment cannot be resolved.
+  \item \textbf{500 Internal Server Error} for unexpected database or server failures.
+\end{itemize}
+
+The controller layer also checks business rules such as allowed course credits, role-specific registration fields, batch-to-advisor assignment ranges, and required subject/content fields for messages and notices.
+
+\section{Frontend Implementation and Integration}
+The frontend is built with HTML, CSS, and JavaScript and communicates with the backend through the \texttt{apiRequest} helper in \texttt{app.js}. The UI is organized into role-based pages for students, advisors, and administrators. Student pages include courses, attendance, CT marks, semester setup, semester CGPA, cumulative CGPA, and messaging. Advisor pages include dashboards, ranking, student reports, watchlists, and message handling. Admin pages include notice publishing and advisor assignment.
+
+The integration layer relies on JSON fetch calls, dynamic table rendering, and local storage fallback when the API is not reachable. This keeps the interface responsive during development and avoids blank screens when the server is temporarily unavailable. The frontend also uses course and semester normalization so that the same backend record can be reused across attendance, CT marks, and CGPA pages.
+
+\begin{lstlisting}
+function apiRequest(path, options) {
+  var session = getSession();
+  var opts = options || {};
+  var headers = { "Content-Type": "application/json" };
+
+  if (session && session.token) {
+    headers.Authorization = "Bearer " + session.token;
+  }
+
+  return fetch(API_BASE + path, {
+    method: opts.method || "GET",
+    headers: headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  }).then(function (response) {
+    return response.json().then(function (payload) {
+      if (!response.ok) throw new Error((payload && payload.message) || "Request failed.");
+      return payload;
+    });
+  });
+}
+\end{lstlisting}
+
+The visual system uses a calm academic palette with Manrope and Space Grotesk fonts, rounded cards, soft shadows, and gradient backgrounds. The main responsive breakpoint is \texttt{@media (max-width: 980px)}, where the top bar stacks vertically and the grid layouts collapse into a single column. Table wrappers remain scrollable so the academic tables still work on smaller screens.
+
+\subsection{Frontend Pages and Integration Notes}
+\begin{itemize}[leftmargin=*]
+  \item The attendance page renders a summary table and a 39-day checklist grid.
+  \item The CT marks page renders one row per course and applies the best-count policy automatically.
+  \item The semester CGPA and cumulative CGPA pages render trend tables from backend data.
+  \item The advisor report page combines attendance, CT, and CGPA analytics into one student view.
+  \item The admin page renders notice publication, advisor assignment, and student batch views.
+\end{itemize}
+
+\figplaceholder{Figure 3: Attendance Summary and Checklist Screen}{Insert the attendance page screenshot here.}
+\figplaceholder{Figure 4: CT Marks and Performance Screen}{Insert the CT marks page screenshot here.}
+\figplaceholder{Figure 5: Advisor Student Report Screen}{Insert the advisor report screenshot here.}
+\figplaceholder{Figure 6: Admin Notice and Advisor Assignment Screens}{Insert the admin page screenshots here.}
+\figplaceholder{Figure 7: Mobile Responsive Layout at 980px and Below}{Insert the mobile view screenshot here.}
+
+\section{Evaluation and Reflection}
+Compared with the proposal, the final system fully implements the core early-warning workflow. Students can enter attendance and CT data, the backend computes performance indicators, and advisors can review students who need attention. The backend also adds several operational features that were not the main focus of the original proposal, such as notices, advisor assignment management, and a richer message store.
+
+The main obstacles during implementation were:
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Course identity mismatch}: course code and course name needed to stay consistent across course registration, attendance, and CT mark pages. This was solved by resolving the actual course document from the database before saving dependent records.
+  \item \textbf{Role-based access control}: the same API had to serve students, advisors, and admins without leaking data. This was solved by a single JWT guard plus role checks in each controller.
+  \item \textbf{Batch-based advisor assignment}: advisor ownership was not a direct foreign key but a batch-range rule. This was handled by comparing student serial numbers and normalized batch values.
+  \item \textbf{Fallback state synchronization}: the frontend had to work both with live API data and localStorage fallback. The rendering logic was therefore written to normalize and rehydrate course data on every page.
+\end{enumerate}
+
+Performance observations during local development showed that the backend remains lightweight for ordinary record loads. Query performance was kept acceptable by using targeted \texttt{find} calls, \texttt{select} filters, \texttt{populate} only where needed, and message limits. The heavier advisor report and ranking endpoints use aggregation pipelines, but those are constrained to assigned batches only, which keeps the query scope manageable.
+
+What is still missing and can be improved:
+\begin{itemize}[leftmargin=*]
+  \item Dedicated PDF export and downloadable reports.
+  \item Email or push notifications for new alerts and messages.
+  \item A formal audit trail for advisor interventions.
+  \item Deployment automation and continuous integration.
+  \item A production-ready monitoring and logging setup.
+\end{itemize}
+
+\section{Conclusion and Contributions}
+Academic Radar meets the core learning goals of the course by combining authentication, routing, validation, database modeling, API design, and frontend integration into one working academic monitoring platform. The backend transforms the proposal into a usable rule-based system that can detect risk early and support advisor intervention.
+
+The project contributes to students by showing them where they stand academically, to advisors by helping them identify at-risk students earlier, and to administration by providing structured dashboards and assignment workflows. From a technical perspective, the project improved skills in API design, role-based authorization, MongoDB modeling, aggregation, and frontend-backend integration.
+
+Final self-evaluation: the project is functionally complete for the proposed core goals, with a few enhancement items left for future work. The backend is stable, modular, and suitable for extension.
+
+\appendix
+\section{Repository Links}
+\begin{itemize}[leftmargin=*]
+  \item Frontend repository: \url{https://github.com/your-username/academic-radar-frontend}
+  \item Backend repository: \url{https://github.com/your-username/academic-radar-backend}
+  \item Public project repository: \url{https://github.com/your-username/academic-radar}
+\end{itemize}
+
+\section{Deployed URL}
+\begin{itemize}[leftmargin=*]
+  \item Deployed URL: \textit{Not deployed yet. Replace this placeholder with the live hosting link if available.}
+\end{itemize}
+
+\section{Sample Database Dumps}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{users}
+  \item \texttt{students}
+  \item \texttt{advisors}
+  \item \texttt{admins}
+  \item \texttt{courses}
+  \item \texttt{student\_courses}
+  \item \texttt{attendance}
+  \item \texttt{ct\_marks}
+  \item \texttt{semester\_setups}
+  \item \texttt{semester\_cgpa}
+  \item \texttt{advisor\_assignments}
+  \item \texttt{notices}
+  \item \texttt{messages}
+\end{itemize}
+
+\end{document}
