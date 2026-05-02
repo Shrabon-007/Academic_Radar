@@ -120,9 +120,7 @@ document.addEventListener("DOMContentLoaded", function () {
         };
 
         if (!token) {
-          setSession(baseSession);
-          window.location.href = target;
-          return;
+          throw new Error("Login failed: token was not provided by server.");
         }
 
         requestJsonWithToken("/auth/me", token).then(function (mePayload) {
@@ -141,12 +139,11 @@ document.addEventListener("DOMContentLoaded", function () {
           });
 
           window.location.href = target;
-        }).catch(function () {
-          setSession(baseSession);
-          window.location.href = target;
+        }).catch(function (error) {
+          alert(error && error.message ? error.message : "Login failed. Please try again.");
         });
       }).catch(function (error) {
-        alert(error.message || "Login failed.");
+        alert(error && error.message ? error.message : "Login failed. Please check your credentials.");
       });
     });
   }
