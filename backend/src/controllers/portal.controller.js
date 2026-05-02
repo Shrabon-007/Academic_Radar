@@ -96,7 +96,8 @@ const getAttendanceMark = (percentage, credit, courseType) => {
   return 0;
 };
 
-const getAttendanceRisk = (percentage) => {
+const getAttendanceRisk = (percentage, classesHeld = 0) => {
+  if (classesHeld === 0) return "watch";
   if (percentage >= 90) return "good";
   if (percentage >= 75) return "watch";
   if (percentage >= 60) return "watch";
@@ -104,7 +105,7 @@ const getAttendanceRisk = (percentage) => {
 };
 
 const getCtPerformance = (earned, maxMarks) => {
-  if (!maxMarks) return "average";
+  if (!maxMarks || earned === 0) return "average";
   const ratio = earned / maxMarks;
   if (ratio >= 0.8) return "strong";
   if (ratio >= 0.6) return "average";
@@ -412,6 +413,48 @@ const updateStudentCourse = async (req, res) => {
   }
 };
 
+const deleteStudentCourse = async (req, res) => {
+  try {
+    const ctx = await withContext(req);
+    if (!ensureRole(res, ctx.user, ["student"])) return;
+    if (!ctx.student) {
+      return res.status(404).json({ success: false, message: "Student profile not found." });
+    }
+
+    const studentCourseId = normalize(req.params.courseId);
+    if (!studentCourseId) {
+      return res.status(400).json({ success: false, message: "courseId is required." });
+    }
+
+    const studentCourse = await StudentCourse.findOne({
+      _id: studentCourseId,
+      studentId: ctx.student._id,
+    });
+
+    if (!studentCourse) {
+      return res.status(404).json({ success: false, message: "Course row not found." });
+    }
+
+    await Promise.all([
+      Attendance.deleteMany({
+        studentId: ctx.student._id,
+        courseId: studentCourse.courseId,
+        semesterLabel: studentCourse.semesterLabel,
+      }),
+      CtMark.deleteMany({
+        studentId: ctx.student._id,
+        courseId: studentCourse.courseId,
+        semesterLabel: studentCourse.semesterLabel,
+      }),
+      StudentCourse.deleteOne({ _id: studentCourse._id }),
+    ]);
+
+    return res.status(200).json({ success: true, message: "Course deleted." });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not delete course.", error: error.message });
+  }
+};
+
 const clearStudentSemesterData = async (req, res) => {
   try {
     const ctx = await withContext(req);
@@ -634,7 +677,7 @@ const saveStudentAttendance = async (req, res) => {
     const held = present + absent;
     const percentage = held ? Math.round((present / held) * 100) : 0;
     const predictedMark = getAttendanceMark(percentage, course.credit, course.courseType);
-    const risk = getAttendanceRisk(percentage);
+    const risk = getAttendanceRisk(percentage, held);
 
     const item = await Attendance.findOneAndUpdate(
       { studentId: ctx.student._id, courseId: course._id, semesterLabel },
@@ -1146,10 +1189,13 @@ const getAdvisorStudentsByBatch = async (req, res) => {
     if (!ensureRole(res, ctx.user, ["advisor"])) return;
 
     const batchQuery = normalize(req.query.batch);
-    const assignmentsFilter = {
-      advisorName: ctx.user.name,
-      status: "assigned",
-    };
+    const advisorProfile = ctx.advisor || await Advisor.findOne({ userId: ctx.user._id });
+    const assignmentsFilter = { status: "assigned" };
+    if (advisorProfile && advisorProfile._id) {
+      assignmentsFilter.advisorId = advisorProfile._id;
+    } else {
+      assignmentsFilter.advisorName = ctx.user.name;
+    }
 
     if (batchQuery) {
       assignmentsFilter.batch = toBatchPattern(batchQuery);
@@ -1324,6 +1370,9 @@ const createAdvisorAssignment = async (req, res) => {
       const advisorProfile = await Advisor.findOne({ userId: advisorUser._id });
       advisorId = advisorProfile ? advisorProfile._id : null;
     }
+    if (!advisorId) {
+      return res.status(404).json({ success: false, message: "Selected advisor account was not found." });
+    }
 
     const existingExact = await AdvisorAssignment.findOne({ batch, advisorName, startSerial, endSerial });
 
@@ -1390,19 +1439,27 @@ const getAdvisorStudentReport = async (req, res) => {
       return res.status(403).json({ success: false, message: "Student is not assigned to this advisor." });
     }
 
-    const advisorAssignments = await AdvisorAssignment.find({
-      advisorName: ctx.user.name,
+    const advisorProfile = ctx.advisor || await Advisor.findOne({ userId: ctx.user._id });
+    const advisorQuery = {
       batch: toBatchPattern(targetStudent.batch),
       status: "assigned",
       startSerial: { $lte: comparable },
       endSerial: { $gte: comparable },
-    }).sort({ createdAt: -1 });
+    };
+    if (advisorProfile && advisorProfile._id) {
+      advisorQuery.advisorId = advisorProfile._id;
+    } else {
+      advisorQuery.advisorName = ctx.user.name;
+    }
+    const advisorAssignments = await AdvisorAssignment.find(advisorQuery).sort({ createdAt: -1 });
 
     if (!advisorAssignments.length) {
       return res.status(403).json({ success: false, message: "You can only view reports of your assigned students." });
     }
 
     const semesterRows = await SemesterCgpa.find({ studentId: targetStudent._id }).sort({ updatedAt: -1, semesterLabel: -1 });
+    const attendanceRowsAll = await Attendance.find({ studentId: targetStudent._id }).populate("courseId").sort({ updatedAt: -1 });
+    const ctRowsAll = await CtMark.find({ studentId: targetStudent._id }).populate("courseId").sort({ updatedAt: -1 });
 
     const semesterItems = semesterRows.map((row) => ({
       semesterLabel: row.semesterLabel,
@@ -1411,15 +1468,19 @@ const getAdvisorStudentReport = async (req, res) => {
       updatedAt: row.updatedAt,
     }));
 
-    const latestSemesterLabel = semesterItems.length ? semesterItems[0].semesterLabel : "";
+    const latestSemesterLabel = semesterItems.length
+      ? semesterItems[0].semesterLabel
+      : (attendanceRowsAll[0] && attendanceRowsAll[0].semesterLabel) || (ctRowsAll[0] && ctRowsAll[0].semesterLabel) || "";
+    const latestAttendanceSemesterLabel = (attendanceRowsAll[0] && attendanceRowsAll[0].semesterLabel) || latestSemesterLabel || "";
+    const latestCtSemesterLabel = (ctRowsAll[0] && ctRowsAll[0].semesterLabel) || latestSemesterLabel || "";
     const currentSemesterCgpa = semesterItems.length ? Number(semesterItems[0].cgpa || 0) : 0;
     const overallCgpa = semesterItems.length
       ? Number((semesterItems.reduce((sum, item) => sum + Number(item.cgpa || 0), 0) / semesterItems.length).toFixed(2))
       : 0;
 
-    const attendanceRows = latestSemesterLabel
-      ? await Attendance.find({ studentId: targetStudent._id, semesterLabel: latestSemesterLabel }).populate("courseId").sort({ updatedAt: -1 })
-      : [];
+    const attendanceRows = latestAttendanceSemesterLabel
+      ? attendanceRowsAll.filter((row) => normalize(row.semesterLabel) === normalize(latestAttendanceSemesterLabel))
+      : attendanceRowsAll;
     const attendanceItems = attendanceRows.map((row) => ({
       courseCode: row.courseId ? row.courseId.code : "",
       courseName: row.courseId ? row.courseId.name : "Course",
@@ -1428,16 +1489,39 @@ const getAdvisorStudentReport = async (req, res) => {
       risk: row.risk || "watch",
     }));
 
-    const ctRows = latestSemesterLabel
-      ? await CtMark.find({ studentId: targetStudent._id, semesterLabel: latestSemesterLabel }).populate("courseId").sort({ updatedAt: -1 })
-      : [];
-    const ctItems = ctRows.map((row) => ({
+    const ctRows = latestCtSemesterLabel
+      ? ctRowsAll.filter((row) => normalize(row.semesterLabel) === normalize(latestCtSemesterLabel))
+      : ctRowsAll;
+    let ctItems = ctRows.map((row) => ({
       courseCode: row.courseId ? row.courseId.code : "",
       courseName: row.courseId ? row.courseId.name : "Course",
       total: Number(row.total || 0),
       maxMarks: Number(row.maxMarks || 0),
       performance: row.performance || "average",
     }));
+
+    // If no CT rows are stored yet, still show course-wise CT report skeleton for advisor.
+    if (!ctItems.length && latestCtSemesterLabel) {
+      const semesterCourses = await StudentCourse.find({
+        studentId: targetStudent._id,
+        semesterLabel: latestCtSemesterLabel,
+        status: "active",
+      }).populate("courseId");
+
+      ctItems = semesterCourses
+        .map((item) => item.courseId)
+        .filter(Boolean)
+        .map((course) => {
+          const policy = getCtPolicy(course.courseType, course.credit);
+          return {
+            courseCode: course.code,
+            courseName: course.name || "Course",
+            total: 0,
+            maxMarks: Number(policy.maxMarks || 0),
+            performance: "average",
+          };
+        });
+    }
 
     const avgAttendance = attendanceItems.length
       ? Number((attendanceItems.reduce((sum, item) => sum + Number(item.percentage || 0), 0) / attendanceItems.length).toFixed(1))
@@ -1450,7 +1534,13 @@ const getAdvisorStudentReport = async (req, res) => {
       }, 0) / ctItems.length).toFixed(1))
       : 0;
 
-    const assignments = await AdvisorAssignment.find({ advisorName: ctx.user.name, status: "assigned" }).sort({ createdAt: -1 });
+    const assignmentQuery = { status: "assigned" };
+    if (advisorProfile && advisorProfile._id) {
+      assignmentQuery.advisorId = advisorProfile._id;
+    } else {
+      assignmentQuery.advisorName = ctx.user.name;
+    }
+    const assignments = await AdvisorAssignment.find(assignmentQuery).sort({ createdAt: -1 });
     const assignmentByBatch = {};
     assignments.forEach((assignment) => {
       const key = normalizeBatchValue(assignment.batch);
@@ -1520,17 +1610,37 @@ const getAdvisorStudentReport = async (req, res) => {
     const currentStudentRank = ranked.findIndex((item) => item.studentId === String(targetStudent._id)) + 1;
     const classSize = ranked.length || 0;
 
+    const weakAttendanceCourses = attendanceItems
+      .filter((item) => String(item.risk || "").toLowerCase() === "critical" || String(item.risk || "").toLowerCase() === "watch")
+      .map((item) => item.courseCode)
+      .filter(Boolean)
+      .slice(0, 3);
+    const weakCtCourses = ctItems
+      .filter((item) => String(item.performance || "").toLowerCase() === "low")
+      .map((item) => item.courseCode)
+      .filter(Boolean)
+      .slice(0, 3);
+
+    let suggestion = "Performance is stable; maintain current effort and target stronger CT scores.";
+    if (overallCgpa < 3) {
+      suggestion = "Overall CGPA is below target. Prioritize weak courses and schedule advisor follow-up.";
+    } else if (weakAttendanceCourses.length && weakCtCourses.length) {
+      suggestion = `Attendance and CT both need attention in ${weakAttendanceCourses.concat(weakCtCourses).slice(0, 3).join(", ")}.`;
+    } else if (weakAttendanceCourses.length) {
+      suggestion = `Improve attendance consistency in ${weakAttendanceCourses.join(", ")} to protect marks.`;
+    } else if (weakCtCourses.length) {
+      suggestion = `Focus CT preparation in ${weakCtCourses.join(", ")} to raise semester performance.`;
+    } else if (avgAttendance < 75) {
+      suggestion = "Improve class attendance consistency to stabilize performance.";
+    }
+
     const performanceSummary = {
       standing: overallCgpa >= 3.5 ? "Good" : overallCgpa >= 3 ? "Moderate" : "At Risk",
       overallCgpa,
       currentSemesterCgpa,
       avgAttendance,
       avgCtPercent,
-      suggestion: overallCgpa < 3
-        ? "Focus on weak courses and schedule regular advisor check-ins."
-        : avgAttendance < 75
-          ? "Improve class attendance consistency to stabilize performance."
-          : "Performance is stable; maintain current effort and target stronger CT scores.",
+      suggestion,
     };
 
     return res.status(200).json({
@@ -1548,6 +1658,8 @@ const getAdvisorStudentReport = async (req, res) => {
           classSize,
         },
         latestSemesterLabel,
+        latestAttendanceSemesterLabel,
+        latestCtSemesterLabel,
         overallCgpa,
         currentSemesterCgpa,
         semesterCgpa: semesterItems,
@@ -1566,7 +1678,14 @@ const getAdvisorPerformanceWatchlist = async (req, res) => {
     const ctx = await withContext(req);
     if (!ensureRole(res, ctx.user, ["advisor"])) return;
 
-    const assignments = await AdvisorAssignment.find({ advisorName: ctx.user.name, status: "assigned" }).sort({ createdAt: -1 });
+    const advisorProfile = ctx.advisor || await Advisor.findOne({ userId: ctx.user._id });
+    const assignmentQuery = { status: "assigned" };
+    if (advisorProfile && advisorProfile._id) {
+      assignmentQuery.advisorId = advisorProfile._id;
+    } else {
+      assignmentQuery.advisorName = ctx.user.name;
+    }
+    const assignments = await AdvisorAssignment.find(assignmentQuery).sort({ createdAt: -1 });
     if (!assignments.length) {
       return res.status(200).json({ success: true, data: { items: [] } });
     }
@@ -1754,11 +1873,7 @@ const sendMessage = async (req, res) => {
       targetUser = await User.findOne({ role: toRole, name: toName });
     }
     if (!targetUser) {
-      targetUser = await User.findOne({ role: toRole }).sort({ createdAt: 1 });
-    }
-
-    if (!targetUser) {
-      return res.status(404).json({ success: false, message: `No ${toRole} account is available to receive this message.` });
+      return res.status(404).json({ success: false, message: `Recipient ${toRole} was not found. Provide a valid recipient.` });
     }
 
     const item = await Message.create({
@@ -1794,6 +1909,7 @@ module.exports = {
   getStudentCourses,
   addStudentCourse,
   updateStudentCourse,
+  deleteStudentCourse,
   clearStudentSemesterData,
   getStudentAttendance,
   saveStudentAttendance,

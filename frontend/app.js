@@ -62,7 +62,9 @@
   }
 
   function clearSession() {
-    localStorage.removeItem(STORAGE_KEYS.session);
+      Object.keys(STORAGE_KEYS).forEach(function (k) {
+        localStorage.removeItem(STORAGE_KEYS[k]);
+      });
   }
 
   function getSession() {
@@ -125,6 +127,27 @@
       .replace(/>/g, "&gt;")
       .replace(/\"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  function isCourseTypeLabel(value) {
+    var normalized = String(value || "").trim().toLowerCase();
+    return normalized === "lab" || normalized === "theory";
+  }
+
+  function looksLikeCourseCode(value) {
+    return /^[A-Z]{2,4}-?\d{3,4}$/i.test(String(value || "").trim());
+  }
+
+  function resolveCourseName(course) {
+    var name = String((course && course.name) || "").trim();
+    var typeField = String((course && course.courseType) || "").trim();
+    if (name && !looksLikeCourseCode(name)) {
+      return name;
+    }
+    if (typeField && !isCourseTypeLabel(typeField)) {
+      return typeField;
+    }
+    return name || "Course";
   }
 
   function parseTokenExpiry(token) {
@@ -421,7 +444,7 @@
           code: String(course.code || "").trim().toUpperCase(),
           name: course.name || "Course",
           credit: Number(course.credit || 3),
-          courseType: String(course.courseType || "theory").toLowerCase(),
+          courseType: String(course.courseType || "theory"),
           semesterLabel: String(item.semesterLabel || course.semesterLabel || item.semester || course.semester || "Level-1 Term-1")
         };
       }).filter(function (c) { return c.code; });
@@ -456,10 +479,11 @@
       });
     }
 
-    function getRisk(percent) {
-      if (percent >= 90) return { text: "Good", cls: "badge-success" };
-      if (percent >= 75) return { text: "Watch", cls: "badge-warning" };
-      if (percent >= 60) return { text: "Low", cls: "badge-warning" };
+    function getRisk(percent, held) {
+      if (held === 0) return { text: "N/A", cls: "badge-warning" };
+      if (percent >= 80) return { text: "Good", cls: "badge-success" };
+      if (percent >= 65) return { text: "Watch", cls: "badge-warning" };
+      if (percent >= 50) return { text: "Low", cls: "badge-warning" };
       return { text: "Critical", cls: "badge-danger" };
     }
 
@@ -472,25 +496,23 @@
     }
 
     function buildAttendanceTables(courses) {
-      var useCourses = (courses && courses.length) ? courses : [
-        { code: "MAT-223", credit: 3, courseType: "theory" },
-        { code: "CSE-332", credit: 3, courseType: "theory" },
-        { code: "EEE-343", credit: 3, courseType: "theory" }
-      ];
+      var useCourses = (courses && courses.length) ? courses : [];
 
       summaryBody.innerHTML = "";
       useCourses.forEach(function (course) {
+        var courseName = resolveCourseName(course);
         var row = document.createElement("tr");
         row.setAttribute("data-summary-course", course.code);
+        row.setAttribute("data-summary-name", courseName);
         row.setAttribute("data-credit", String(course.credit));
         row.setAttribute("data-course-type", course.courseType);
         row.setAttribute("data-semester-label", course.semesterLabel);
-        row.innerHTML = "<td>" + course.code + "</td>" +
+        row.innerHTML = "<td>" + escapeHtml(courseName) + "</td>" +
           "<td>0</td>" +
           "<td class='attended-cell'>0</td>" +
           "<td class='percent-cell'>0%</td>" +
           "<td class='mark-cell'>0 / " + getAttendanceMaxMark(course.credit, course.courseType) + "</td>" +
-          "<td><span class='badge risk-badge badge-danger'>Critical</span></td>";
+          "<td><span class='badge risk-badge badge-warning'>Watch</span></td>";
         summaryBody.appendChild(row);
       });
 
@@ -500,7 +522,7 @@
       gridHead.appendChild(dayHeader);
       useCourses.forEach(function (course) {
         var th = document.createElement("th");
-        th.textContent = course.code;
+        th.textContent = resolveCourseName(course);
         gridHead.appendChild(th);
       });
 
@@ -545,7 +567,7 @@
       var held = present + absent;
       var percent = held === 0 ? 0 : Math.round((present / held) * 100);
       var mark = getAttendanceMark(percent, getCourseCredit(row), getCourseType(row));
-      var risk = getRisk(percent);
+      var risk = getRisk(percent, held);
       var maxMark = getAttendanceMaxMark(getCourseCredit(row), getCourseType(row));
 
       row.children[1].textContent = String(held);
@@ -583,7 +605,7 @@
       var critical = [];
       var watch = [];
       summaryRows.forEach(function (row) {
-        var code = row.getAttribute("data-summary-course") || "Course";
+        var code = row.getAttribute("data-summary-name") || "Course";
         var badge = row.querySelector(".risk-badge");
         var riskLabel = String((badge && badge.textContent) || "").toLowerCase();
         if (riskLabel === "critical") critical.push(code);
@@ -596,6 +618,8 @@
           alertEl.textContent = "Critical attendance risk in " + critical.join(", ") + ". Increase class presence immediately to avoid losing attendance marks.";
         } else if (watch.length) {
           alertEl.textContent = "Watch list: " + watch.join(", ") + ". Keep attendance above 75% to protect predicted marks.";
+        } else if (average === 0) {
+          alertEl.textContent = "No attendance records entered yet. Mark classes first to generate a risk report.";
         } else {
           alertEl.textContent = "Great attendance trend across courses. Continue consistent attendance to keep full attendance marks.";
         }
@@ -689,7 +713,7 @@
           code: String(course.code || "").trim().toUpperCase(),
           name: course.name || "Course",
           credit: Number(course.credit || 3),
-          courseType: String(course.courseType || "theory").toLowerCase(),
+          courseType: String(course.courseType || "theory"),
           semesterLabel: String(item.semesterLabel || course.semesterLabel || item.semester || course.semester || "Level-1 Term-1")
         };
       }).filter(function (c) { return c.code; });
@@ -724,21 +748,18 @@
     }
 
     function buildCtRows(courses) {
-      var useCourses = (courses && courses.length) ? courses : [
-        { code: "CSE-321", credit: 4, courseType: "theory" },
-        { code: "CSE-331", credit: 3, courseType: "theory" },
-        { code: "MAT-223", credit: 3, courseType: "theory" }
-      ];
+      var useCourses = (courses && courses.length) ? courses : [];
 
       tableBody.innerHTML = "";
       useCourses.forEach(function (course) {
+        var courseName = resolveCourseName(course);
         var policy = getCtPolicy(course.courseType, course.credit);
         var row = document.createElement("tr");
         row.setAttribute("data-course-type", course.courseType);
         row.setAttribute("data-credit", String(course.credit));
         row.setAttribute("data-course-code", course.code);
         row.setAttribute("data-semester-label", course.semesterLabel);
-        row.innerHTML = "<td>" + course.code + "</td>" +
+        row.innerHTML = "<td>" + escapeHtml(courseName) + "</td>" +
           "<td>" + (course.courseType === "lab" ? "Lab" : "Theory") + "</td>" +
           "<td>" + course.credit.toFixed(2).replace(/\.00$/, ".0") + "</td>" +
           "<td><input type='number' value='0'></td>" +
@@ -833,6 +854,7 @@
         return (x.total / x.max) * 100;
       });
       var average = ratios.length ? Math.round(ratios.reduce(function (a, b) { return a + b; }, 0) / ratios.length) : 0;
+      var hasCtData = rowsComputed.some(function (item) { return Number(item.total || 0) > 0; });
 
       var avgStrong = document.querySelectorAll(".stats strong")[0];
       if (avgStrong) {
@@ -864,7 +886,10 @@
         var bestBadge = statCards[1].querySelector(".badge");
         var bestRatio = best && best.max ? best.total / best.max : 0;
         if (bestBadge) {
-          if (bestRatio >= 0.8) {
+          if (!hasCtData) {
+            bestBadge.className = "badge badge-warning";
+            bestBadge.textContent = "N/A";
+          } else if (bestRatio >= 0.8) {
             bestBadge.className = "badge badge-success";
             bestBadge.textContent = "Strong";
           } else if (bestRatio >= 0.6) {
@@ -881,7 +906,10 @@
         var lowBadge = statCards[2].querySelector(".badge");
         var lowRatio = low && low.max ? low.total / low.max : 0;
         if (lowBadge) {
-          if (lowRatio < 0.5) {
+          if (!hasCtData) {
+            lowBadge.className = "badge badge-warning";
+            lowBadge.textContent = "N/A";
+          } else if (lowRatio < 0.5) {
             lowBadge.className = "badge badge-danger";
             lowBadge.textContent = "Critical";
           } else if (lowRatio < 0.65) {
@@ -896,7 +924,9 @@
 
       var feedbackEl = document.getElementById("ctFeedbackSummary");
       if (feedbackEl) {
-        if (average < 50) {
+        if (!hasCtData) {
+          feedbackEl.textContent = "CT report: no CT marks entered yet. Add marks to generate a real risk analysis.";
+        } else if (average < 50) {
           feedbackEl.textContent = "CT report: overall CT performance is low (" + average + "%). Focus first on " + (low ? low.course : "weaker courses") + " and target at least 12/20 in upcoming CTs.";
         } else if (average < 70) {
           feedbackEl.textContent = "CT report: performance is moderate (" + average + "%). Maintain consistency and improve the weakest course (" + (low ? low.course : "N/A") + ") by 2-3 marks per CT.";
@@ -1084,12 +1114,26 @@
         "<td>" + getCtPolicy(item.course.courseType, item.course.credit).label + "</td>" +
         "<td>" + getTeacherLabel(item.course) + "</td>" +
         "<td><span class='badge badge-success'>Active</span></td>" +
-        "<td><button type='button' class='btn btn-outline btn-sm course-edit-btn'>Edit</button></td>";
+        "<td><button type='button' class='btn btn-outline btn-sm course-edit-btn'>Edit</button> <button type='button' class='btn btn-danger btn-sm course-delete-btn'>Delete</button></td>";
+      
       var editBtn = tr.querySelector(".course-edit-btn");
       if (editBtn) {
         editBtn.addEventListener("click", function () {
           applyCourseToForm(item);
           showToast("Course loaded. You can now edit and save changes.");
+        });
+      }
+      var deleteBtn = tr.querySelector(".course-delete-btn");
+      if (deleteBtn) {
+        deleteBtn.addEventListener("click", function () {
+          if (confirm("Are you sure you want to delete this course?")) {
+            apiRequest("/portal/student/courses/" + item.id, { method: "DELETE" }).then(function () {
+              showToast("Course deleted successfully.");
+              loadCourseRows();
+            }).catch(function (err) {
+              showToast(getErrorMessage(err), "error");
+            });
+          }
         });
       }
       tableBody.appendChild(tr);
@@ -1724,8 +1768,9 @@
       apiRequest("/portal/admin/advisors", { method: "GET" }).then(function (payload) {
         var items = (((payload || {}).data || {}).items) || [];
         renderAdvisors(items);
-      }).catch(function () {
-        // Keep static fallback from HTML if API fails.
+      }).catch(function (error) {
+        renderAdvisors([]);
+        showToast(error.message || "Could not load advisor accounts.");
       });
     }
 
@@ -1734,7 +1779,7 @@
       historyBody.innerHTML = "";
       items.forEach(function (item) {
         var row = document.createElement("tr");
-        row.innerHTML = "<td>" + formatDate() + "</td><td>" + (item.advisorName || item.teacher || "Advisor") + "</td><td>" + String(item.batch || "").replace("Batch ", "") + "</td><td>" + (item.startSerial || item.startId || 0) + "-" + (item.endSerial || item.endId || 0) + "</td><td><span class='badge badge-success'>Assigned</span></td>";
+        row.innerHTML = "<td>" + formatDate(item.createdAt || item.updatedAt || item.date) + "</td><td>" + (item.advisorName || item.teacher || "Advisor") + "</td><td>" + String(item.batch || "").replace("Batch ", "") + "</td><td>" + (item.startSerial || item.startId || 0) + "-" + (item.endSerial || item.endId || 0) + "</td><td><span class='badge badge-success'>Assigned</span></td>";
         historyBody.appendChild(row);
       });
     }
@@ -1779,7 +1824,7 @@
         renderStudents(items);
       }).catch(function (error) {
         renderStudents([]);
-        showToast(error.message || "Could not load students for selected batch.");
+        showToast(error.message || "Could not load students for this batch.");
       });
     }
 
@@ -1927,8 +1972,7 @@
     if (batchSelect) batchSelect.addEventListener("change", loadAdvisorStudents);
     if (semesterSelect) {
       semesterSelect.addEventListener("change", function () {
-        showToast("Showing ranking for " + semesterSelect.value + ".");
-        loadAdvisorStudents();
+        showToast("Semester filter is not available yet in ranking API.");
       });
     }
 
@@ -1990,6 +2034,12 @@
     }
 
     if (!studentUserId && !studentId) {
+      if (subtitleEl) {
+        subtitleEl.textContent = "No student selected. Open this report from advisor ranking to load student data.";
+      }
+      if (summarySuggestionEl) {
+        summarySuggestionEl.textContent = "Please return to ranking and open a student report from there.";
+      }
       showToast("Student not selected. Open report from advisor ranking page.");
       return;
     }
@@ -2028,7 +2078,8 @@
         attendanceBody.innerHTML = "";
         if (!attendanceItems.length) {
           var emptyAttendance = document.createElement("tr");
-          emptyAttendance.innerHTML = "<td colspan='4' class='muted'>No attendance data found for current semester.</td>";
+          var attendanceLabel = data.latestAttendanceSemesterLabel || data.latestSemesterLabel || "selected semester";
+          emptyAttendance.innerHTML = "<td colspan='4' class='muted'>No attendance data found for " + attendanceLabel + ".</td>";
           attendanceBody.appendChild(emptyAttendance);
         } else {
           attendanceItems.forEach(function (item) {
@@ -2047,7 +2098,8 @@
         ctBody.innerHTML = "";
         if (!ctItems.length) {
           var emptyCt = document.createElement("tr");
-          emptyCt.innerHTML = "<td colspan='4' class='muted'>No CT data found for current semester.</td>";
+          var ctLabel = data.latestCtSemesterLabel || data.latestSemesterLabel || "selected semester";
+          emptyCt.innerHTML = "<td colspan='4' class='muted'>No CT data found for " + ctLabel + ".</td>";
           ctBody.appendChild(emptyCt);
         } else {
           ctItems.forEach(function (item) {
@@ -2088,6 +2140,16 @@
       if (summaryCtEl) summaryCtEl.textContent = Number(summary.avgCtPercent || 0).toFixed(1) + "%";
       if (summarySuggestionEl) summarySuggestionEl.textContent = summary.suggestion || "No suggestion available.";
     }).catch(function (error) {
+      if (subtitleEl) subtitleEl.textContent = "Could not load this student report.";
+      if (attendanceBody) {
+        attendanceBody.innerHTML = "<tr><td colspan='4' class='muted'>Could not load attendance data.</td></tr>";
+      }
+      if (ctBody) {
+        ctBody.innerHTML = "<tr><td colspan='4' class='muted'>Could not load CT data.</td></tr>";
+      }
+      if (semesterCgpaBody) {
+        semesterCgpaBody.innerHTML = "<tr><td colspan='4' class='muted'>Could not load semester CGPA data.</td></tr>";
+      }
       showToast(error.message || "Could not load student report.");
     });
   }
@@ -2101,6 +2163,8 @@
       ? document.getElementById("studentNoticeTableBody")
       : document.getElementById("advisorNoticeTableBody");
     if (!tableBody) return;
+
+    tableBody.innerHTML = "<tr><td colspan='4' class='muted'>Loading notices...</td></tr>";
 
     function priorityBadge(priority) {
       var p = String(priority || "").toLowerCase();
@@ -2975,3 +3039,4 @@
     initAccountSettingsPage();
   });
 })();
+

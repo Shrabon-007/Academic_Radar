@@ -5,6 +5,7 @@ const {
   getStudentCourses,
   addStudentCourse,
   updateStudentCourse,
+  deleteStudentCourse,
   clearStudentSemesterData,
   getStudentAttendance,
   saveStudentAttendance,
@@ -37,6 +38,7 @@ router.use(authGuard);
 router.get("/student/courses", getStudentCourses);
 router.post("/student/courses", addStudentCourse);
 router.put("/student/courses/:courseId", updateStudentCourse);
+router.delete("/student/courses/:courseId", deleteStudentCourse);
 router.delete("/student/semester-data", clearStudentSemesterData);
 
 router.get("/student/attendance", getStudentAttendance);
